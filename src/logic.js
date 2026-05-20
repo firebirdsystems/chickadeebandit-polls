@@ -1,4 +1,5 @@
 // Shared utilities (memberColor, initial, esc, isAdult, formatRelativeDate) live in /hub-sdk.js.
+export { AVATAR_COLORS, memberColor, initial, esc, isAdult, formatRelativeDate } from "./shared.js";
 // This file exports polls-specific logic only.
 
 export function pollStatus(poll) {
