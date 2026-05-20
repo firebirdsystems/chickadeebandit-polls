@@ -1,0 +1,1406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Family Polls</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      /* Derived from hub theme variables injected at runtime */
+      --bg:            var(--hub-bg, #f9fafb);
+      --card:          var(--hub-surface, #ffffff);
+      --border:        var(--hub-border, #e5e7eb);
+      --border-mid:    var(--hub-border, #d1d5db);
+      --text:          var(--hub-text, #111827);
+      --muted:         var(--hub-text-muted, #6b7280);
+      --accent:        var(--hub-primary, #111827);
+      --accent-hover:  var(--hub-primary-hover, #374151);
+      --accent-light:  #f3f4f6;
+      --accent-lighter:#f9fafb;
+      --green: #059669;
+      --green-light: #d1fae5;
+      --red: #dc2626;
+      --red-light: #fee2e2;
+      --amber: #d97706;
+      --amber-light: #fef3c7;
+      --radius: var(--hub-radius, 0.5rem);
+      --shadow: 0 1px 3px rgba(0,0,0,.07);
+      --shadow-md: 0 4px 12px rgba(0,0,0,.1);
+    }
+
+    body {
+      font-family: var(--hub-font, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    .app { max-width: 600px; margin: 0 auto; padding: 16px; }
+
+    /* ── Typography ─────────────────────────────────────── */
+    .section-title {
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      margin-bottom: 8px;
+    }
+
+    /* ── Buttons ────────────────────────────────────────── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: opacity .15s, background .15s;
+      text-decoration: none;
+    }
+    .btn:disabled { opacity: .45; cursor: default; }
+    .btn-primary { background: var(--accent); color: var(--hub-primary-fg, #ffffff); }
+    .btn-primary:hover:not(:disabled) { background: var(--accent-hover); }
+    .btn-ghost { background: transparent; color: var(--muted); border: 1.5px solid var(--border-mid); }
+    .btn-ghost:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+    .btn-danger { background: var(--red); color: white; }
+    .btn-danger:hover:not(:disabled) { opacity: .88; }
+    .btn-sm { padding: 5px 12px; font-size: 0.8rem; }
+    .btn-icon {
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: 1rem;
+      line-height: 1;
+      border: 1.5px solid var(--border-mid);
+      cursor: pointer;
+      background: var(--card);
+      transition: all .15s;
+      font-weight: 700;
+    }
+    .btn-icon:disabled { opacity: .35; cursor: default; }
+    .btn-icon.up { color: var(--accent); }
+    .btn-icon.up.voted { background: var(--accent); color: white; border-color: var(--accent); }
+    .btn-icon.up:hover:not(:disabled):not(.voted) { border-color: var(--accent); background: var(--accent-light); }
+    .btn-icon.down { color: var(--red); }
+    .btn-icon.down.voted { background: var(--red); color: white; border-color: var(--red); }
+    .btn-icon.down:hover:not(:disabled):not(.voted) { border-color: var(--red); background: var(--red-light); }
+
+    /* ── Cards ──────────────────────────────────────────── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      margin-bottom: 10px;
+    }
+    .card-header {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .card-body { padding: 16px; }
+
+    /* ── Header ─────────────────────────────────────────── */
+    .page-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      gap: 10px;
+    }
+    .page-header h1 { font-size: 1.25rem; font-weight: 700; }
+    .page-header .who { font-size: 0.82rem; color: var(--muted); }
+
+    /* ── Who screen ─────────────────────────────────────── */
+    #who-screen { text-align: center; padding: 48px 16px; }
+    #who-screen h2 { font-size: 1.5rem; font-weight: 700; margin-bottom: 6px; }
+    #who-screen p { color: var(--muted); margin-bottom: 32px; }
+    .member-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 12px;
+      max-width: 420px;
+      margin: 0 auto;
+    }
+    .member-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      padding: 20px 10px;
+      background: var(--card);
+      border: 2px solid var(--border);
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--text);
+      transition: all .15s;
+    }
+    .member-btn:hover { border-color: var(--accent); background: var(--accent-light); }
+    .avatar {
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem; font-weight: 800;
+      color: white;
+      flex-shrink: 0;
+    }
+    .avatar-sm {
+      width: 24px; height: 24px;
+      border-radius: 50%;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 0.65rem; font-weight: 800;
+      color: white;
+    }
+
+    /* ── Poll list ──────────────────────────────────────── */
+    .poll-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: box-shadow .15s, border-color .15s;
+    }
+    .poll-card:hover { box-shadow: var(--shadow-md); border-color: var(--border-mid); }
+    .poll-card-inner { padding: 14px 16px; }
+    .poll-question {
+      font-weight: 600;
+      font-size: 1rem;
+      margin-bottom: 8px;
+      line-height: 1.4;
+    }
+    .poll-meta {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 20px;
+    }
+    .badge-open { background: var(--green-light); color: var(--green); }
+    .badge-closed { background: #f1f5f9; color: var(--muted); }
+    .badge-expired { background: var(--amber-light); color: var(--amber); }
+    .badge-voted { background: var(--accent-light); color: var(--accent); }
+
+    .poll-stats {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    /* ── Tabs ───────────────────────────────────────────── */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      background: var(--border);
+      border-radius: 10px;
+      padding: 3px;
+      margin-bottom: 16px;
+    }
+    .tab {
+      flex: 1;
+      padding: 7px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--muted);
+      background: transparent;
+      transition: all .15s;
+    }
+    .tab.active { background: white; color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+
+    /* ── Poll detail ────────────────────────────────────── */
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.82rem;
+      color: var(--accent);
+      cursor: pointer;
+      background: none;
+      border: none;
+      padding: 0;
+      margin-bottom: 12px;
+      font-weight: 600;
+    }
+    .back-btn:hover { opacity: .75; }
+
+    .poll-detail-header {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 12px;
+      box-shadow: var(--shadow);
+    }
+    .poll-detail-question {
+      font-size: 1.15rem;
+      font-weight: 700;
+      line-height: 1.4;
+      margin-bottom: 10px;
+    }
+    .poll-detail-meta {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    /* ── Voting hint ─────────────────────────────────────── */
+    .vote-hint {
+      background: var(--accent-light);
+      border: 1px solid var(--border-mid);
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 0.82rem;
+      color: var(--accent);
+      font-weight: 500;
+      margin-bottom: 12px;
+    }
+    .vote-hint.exhausted {
+      background: #f0fdf4;
+      border-color: #bbf7d0;
+      color: var(--green);
+    }
+
+    /* ── Option rows ─────────────────────────────────────── */
+    .option-row {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      transition: background .1s;
+    }
+    .option-row:last-child { border-bottom: none; }
+    .option-row:hover { background: var(--accent-lighter); }
+
+    .option-top {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+    .option-text {
+      flex: 1;
+      font-weight: 500;
+      font-size: 0.95rem;
+      line-height: 1.4;
+    }
+    .option-vote-btns {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .vote-count {
+      font-size: 0.78rem;
+      font-weight: 700;
+      min-width: 18px;
+      text-align: center;
+    }
+    .vote-count.up { color: var(--accent); }
+    .vote-count.net-pos { color: var(--green); }
+    .vote-count.net-neg { color: var(--red); }
+
+    /* ── Vote bar ────────────────────────────────────────── */
+    .vote-bar-wrap {
+      height: 6px;
+      background: var(--border);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .vote-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      background: var(--accent);
+      transition: width .3s ease;
+    }
+    .vote-bar-fill.winning { background: var(--green); }
+
+    /* ── Who voted ───────────────────────────────────────── */
+    .voters {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+      margin-top: 6px;
+    }
+    .voter-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.72rem;
+      color: var(--muted);
+      background: var(--accent-lighter);
+      border-radius: 20px;
+      padding: 2px 7px 2px 3px;
+    }
+    .voter-chip.downvoter { background: #fff1f2; }
+
+    /* ── Closed overlay ──────────────────────────────────── */
+    .closed-banner {
+      background: #f8fafc;
+      border: 1px dashed #cbd5e1;
+      border-radius: 8px;
+      padding: 10px 14px;
+      text-align: center;
+      font-size: 0.82rem;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+
+    /* ── Hidden results ──────────────────────────────────── */
+    .hidden-results-banner {
+      background: var(--amber-light);
+      border: 1px solid #fcd34d;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 0.82rem;
+      color: var(--amber);
+      text-align: center;
+      margin-bottom: 12px;
+    }
+
+    /* ── Poll actions ────────────────────────────────────── */
+    .poll-actions {
+      display: flex;
+      gap: 8px;
+      padding: 12px 14px;
+      border-top: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+
+    /* ── Modal ──────────────────────────────────────────── */
+    .modal-backdrop {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.45);
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      z-index: 100;
+    }
+    @media (min-width: 520px) {
+      .modal-backdrop { align-items: center; padding: 20px; }
+    }
+    .modal {
+      background: var(--card);
+      border-radius: var(--radius) var(--radius) 0 0;
+      width: 100%;
+      max-width: 500px;
+      max-height: 92vh;
+      overflow-y: auto;
+      padding: 24px;
+    }
+    @media (min-width: 520px) {
+      .modal { border-radius: var(--radius); }
+    }
+    .modal h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 18px; }
+
+    /* ── Form ────────────────────────────────────────────── */
+    .form-group { margin-bottom: 16px; }
+    .form-group label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--muted);
+      margin-bottom: 5px;
+    }
+    .form-group input[type="text"],
+    .form-group input[type="number"],
+    .form-group input[type="datetime-local"],
+    .form-group textarea,
+    .form-group select {
+      width: 100%;
+      border: 1.5px solid var(--border-mid);
+      border-radius: 8px;
+      padding: 9px 12px;
+      font-size: 0.92rem;
+      outline: none;
+      transition: border-color .15s;
+      font-family: inherit;
+    }
+    .form-group input:focus,
+    .form-group textarea:focus,
+    .form-group select:focus { border-color: var(--accent); }
+    .form-group textarea { resize: vertical; min-height: 70px; }
+
+    .option-input-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+      align-items: center;
+    }
+    .option-input-row input { flex: 1; }
+    .option-input-row .remove-opt {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 1.1rem;
+      color: var(--muted);
+      padding: 4px;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+    .option-input-row .remove-opt:hover { color: var(--red); }
+
+    /* ── Toggle / Settings ───────────────────────────────── */
+    .settings-section {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+    .settings-toggle-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 11px 14px;
+      cursor: pointer;
+      font-size: 0.88rem;
+      font-weight: 600;
+      background: var(--accent-lighter);
+      user-select: none;
+    }
+    .settings-toggle-header:hover { background: var(--accent-light); }
+    .settings-body { display: none; }
+    .settings-body.open { display: block; }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .toggle-row:last-child { border-bottom: none; }
+    .toggle-label .name { font-size: 0.88rem; font-weight: 500; }
+    .toggle-label .desc { font-size: 0.75rem; color: var(--muted); }
+    .toggle {
+      position: relative;
+      width: 40px; height: 22px;
+      flex-shrink: 0;
+    }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .toggle-track {
+      position: absolute; inset: 0;
+      border-radius: 11px;
+      background: #cbd5e1;
+      cursor: pointer;
+      transition: background .2s;
+    }
+    .toggle input:checked + .toggle-track { background: var(--accent); }
+    .toggle-thumb {
+      position: absolute;
+      top: 3px; left: 3px;
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      background: var(--card);
+      box-shadow: 0 1px 3px rgba(0,0,0,.2);
+      transition: transform .2s;
+      pointer-events: none;
+    }
+    .toggle input:checked ~ .toggle-thumb { transform: translateX(18px); }
+
+    .num-input-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .num-input-row:last-child { border-bottom: none; }
+    .num-input-row input[type="number"] {
+      width: 70px;
+      text-align: center;
+      padding: 5px 8px;
+      border: 1.5px solid var(--border-mid);
+      border-radius: 8px;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    .modal-actions .btn { flex: 1; justify-content: center; }
+
+    /* ── Empty state ─────────────────────────────────────── */
+    .empty {
+      text-align: center;
+      padding: 40px 16px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    .empty-icon { font-size: 2.5rem; margin-bottom: 10px; }
+
+    /* ── Misc ────────────────────────────────────────────── */
+    .loading { text-align: center; padding: 48px; color: var(--muted); }
+    .error-msg {
+      background: var(--red-light);
+      color: var(--red);
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 0.85rem;
+      margin-bottom: 12px;
+    }
+    .divider { border: none; border-top: 1px solid var(--border); margin: 8px 0; }
+    .expiry-note {
+      font-size: 0.75rem;
+      color: var(--amber);
+      font-weight: 500;
+    }
+    .expiry-note.soon { color: var(--red); }
+  </style>
+<base href="/run/family-polls/">
+</head>
+<body>
+<div class="app">
+  <div id="root"><div class="loading">Loading…</div></div>
+</div>
+
+<script type="module">
+import { memberColor, initial, esc, isAdult, formatRelativeDate } from "/hub-sdk.js";
+import {
+  isPollOpen, pollStatus,
+  upVoters, downVoters, upCount, downCount, netScore,
+  memberUpVotedOptions, memberDownVotedOptions, votesUsed, hasVoted,
+  totalUpVotes, winningOptionId, expiryLabel,
+} from "./logic.js";
+
+// ─── Runtime globals injected by Chickadee Bandit ────────────────────────────────
+const CONTEXT  = window.__CONTEXT_URL ?? "";
+const STORE    = window.__STORE_URL   ?? "";
+const APP_ID   = window.__APP_ID      ?? "family-polls";
+// When the hub injects __CURRENT_MEMBER, identity is known — skip the who screen
+const HUB_MEMBER = window.__CURRENT_MEMBER ?? null;
+
+// ─── State ────────────────────────────────────────────────────────────────────
+let members       = [];
+let currentMember = null;   // null = who screen (only shown when HUB_MEMBER is null)
+let currentPollId = null;   // null = list view
+let listTab       = "open"; // "open" | "closed"
+let data          = { polls: [] }; // poll metadata — no votes stored here
+let currentVotes  = {};     // votes for the currently open poll: { optId: { up: [], down: [] } }
+let voteTotalCache = {};    // { pollId: number } — total upvotes, filled when a poll is opened
+let settingsOpen  = false;
+
+// ─── Member helpers ───────────────────────────────────────────────────────────
+function memberById(id) { return members.find(m => m.id === id); }
+
+function canModerate(poll) {
+  if (!currentMember) return false;
+  return currentMember.role === "adult" || poll.createdBy === currentMember.id;
+}
+
+// ─── Persistence ──────────────────────────────────────────────────────────────
+/** Votes are stored separately from poll metadata to avoid blob-overwrite races. */
+function voteKey(pollId) { return `v:${pollId}`; }
+
+async function loadData() {
+  if (!STORE) return;
+  try {
+    const res = await fetch(`${STORE}?key=data`);
+    const json = await res.json();
+    if (json.value) {
+      const stored = JSON.parse(json.value);
+      data = { polls: [], ...stored };
+      for (const poll of data.polls) {
+        // Migrate old format: if votes are embedded, strip them (we load separately now)
+        delete poll.votes;
+        poll.settings = {
+          maxChoices: 1, allowDownvote: false, showBeforeVoting: true,
+          allowAddOptions: true, anonymous: false, expiresAt: null,
+          ...poll.settings,
+        };
+      }
+    }
+  } catch { /* use defaults */ }
+}
+
+async function loadPollVotes(pollId) {
+  if (!STORE) return {};
+  try {
+    const res = await fetch(`${STORE}?key=${encodeURIComponent(voteKey(pollId))}`);
+    const json = await res.json();
+    return json.value ? JSON.parse(json.value) : {};
+  } catch { return {}; }
+}
+
+async function saveData() {
+  if (!STORE) return;
+  // Save only poll metadata — votes are managed separately via PATCH
+  const meta = { polls: data.polls.map(p => ({ ...p, votes: undefined })) };
+  await fetch(STORE, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ key: "data", value: JSON.stringify(meta) }),
+  });
+}
+
+async function loadMembers() {
+  if (!CONTEXT) {
+    members = [
+      { id: "demo-1", name: "Alex", role: "adult" },
+      { id: "demo-2", name: "Jordan", role: "adult" },
+      { id: "demo-3", name: "Casey", role: "child" },
+      { id: "demo-4", name: "Riley", role: "child" },
+    ];
+    return;
+  }
+  try {
+    const res = await fetch(`${CONTEXT}?keys=family.members`);
+    members = ((await res.json())["family.members"]) ?? [];
+  } catch { members = []; }
+}
+
+// ─── Actions ──────────────────────────────────────────────────────────────────
+
+/**
+ * Cast or toggle a vote using an atomic PATCH op.
+ * The server applies the ops in a transaction — no race condition possible.
+ */
+async function castVote(pollId, optId, direction) {
+  const poll = data.polls.find(p => p.id === pollId);
+  if (!poll || !isPollOpen(poll) || !currentMember) return;
+
+  const memberId = currentMember.id;
+  const votes    = currentVotes; // loaded when poll was opened
+  const ops      = [];
+
+  if (direction === "up") {
+    const alreadyUp = upVoters(votes, optId).includes(memberId);
+    if (alreadyUp) {
+      // Toggle off
+      ops.push({ op: "array_remove", path: `${optId}.up`, value: memberId });
+    } else {
+      if (poll.settings.maxChoices === 1) {
+        // Single-choice: remove any existing upvote on another option first
+        const prevOpt = memberUpVotedOptions(poll, votes, memberId)[0];
+        if (prevOpt) ops.push({ op: "array_remove", path: `${prevOpt}.up`, value: memberId });
+      } else if (votesUsed(poll, votes, memberId) >= poll.settings.maxChoices) {
+        return; // No votes left
+      }
+      ops.push({ op: "array_remove", path: `${optId}.down`, value: memberId }); // can't up+down same
+      ops.push({ op: "array_append", path: `${optId}.up`,   value: memberId });
+    }
+  } else if (direction === "down" && poll.settings.allowDownvote) {
+    const alreadyDown = downVoters(votes, optId).includes(memberId);
+    if (alreadyDown) {
+      ops.push({ op: "array_remove", path: `${optId}.down`, value: memberId });
+    } else {
+      ops.push({ op: "array_remove", path: `${optId}.up`,   value: memberId }); // can't up+down same
+      ops.push({ op: "array_append", path: `${optId}.down`, value: memberId });
+    }
+  }
+
+  if (ops.length === 0) return;
+
+  // PATCH is atomic — server reads, applies ops, writes in one transaction
+  const res = await fetch(STORE, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ key: voteKey(pollId), ops }),
+  });
+  if (!res.ok) return;
+  const { value } = await res.json();
+  // Update local state from server's authoritative result
+  currentVotes = value ?? votes;
+  voteTotalCache[pollId] = totalUpVotes(poll, currentVotes);
+  render();
+}
+
+async function createPoll(pollData) {
+  const id = crypto.randomUUID();
+  const poll = {
+    id,
+    question: pollData.question,
+    options: pollData.options.map(text => ({ id: crypto.randomUUID(), text, addedBy: currentMember.id })),
+    createdBy: currentMember.id,
+    createdAt: new Date().toISOString(),
+    closed: false,
+    resultPosted: false,
+    settings: {
+      maxChoices:        pollData.maxChoices,
+      allowDownvote:     pollData.allowDownvote,
+      showBeforeVoting:  pollData.showBeforeVoting,
+      allowAddOptions:   pollData.allowAddOptions,
+      anonymous:         pollData.anonymous,
+      expiresAt:         pollData.expiresAt || null,
+    },
+  };
+  data.polls.unshift(poll);
+  await saveData();
+  currentVotes = {};
+  voteTotalCache[id] = 0;
+
+  if (STORE) {
+    const creator = currentMember.name;
+    fetch("/api/notifications/send", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: `New poll: ${poll.question.slice(0, 60)}`,
+        body: `${creator} created a poll with ${poll.options.length} options — cast your vote!`,
+        url: `/run/${APP_ID}`,
+      }),
+    }).catch(() => {});
+    fetch("/api/messages", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ authorName: "Household Polls", body: `📊 New poll from ${creator}: "${poll.question}"`, url: `/run/${APP_ID}` }),
+    }).catch(() => {});
+  }
+
+  currentPollId = id;
+  closeModal();
+  render();
+}
+
+async function addOption(pollId, text) {
+  const poll = data.polls.find(p => p.id === pollId);
+  if (!poll || !isPollOpen(poll)) return;
+  poll.options.push({ id: crypto.randomUUID(), text, addedBy: currentMember.id });
+  await saveData();
+  closeModal();
+  render();
+}
+
+async function closePoll(pollId) {
+  const poll = data.polls.find(p => p.id === pollId);
+  if (!poll) return;
+  poll.closed = true;
+  if (!poll.resultPosted) {
+    poll.resultPosted = true;
+    postPollResultActivity(poll, currentVotes).catch(() => {});
+  }
+  await saveData();
+  render();
+}
+
+async function reopenPoll(pollId) {
+  const poll = data.polls.find(p => p.id === pollId);
+  if (!poll) return;
+  poll.closed = false;
+  await saveData();
+  render();
+}
+
+async function deletePoll(pollId) {
+  if (!confirm("Delete this poll? This cannot be undone.")) return;
+  data.polls = data.polls.filter(p => p.id !== pollId);
+  currentPollId = null;
+  currentVotes = {};
+  await saveData();
+  // Clean up the vote key too
+  if (STORE) fetch(`${STORE}?key=${encodeURIComponent(voteKey(pollId))}`, { method: "DELETE" }).catch(() => {});
+  render();
+}
+
+async function deleteOption(pollId, optId) {
+  const poll = data.polls.find(p => p.id === pollId);
+  if (!poll || poll.options.length <= 2) return;
+  if (!confirm("Remove this option?")) return;
+  poll.options = poll.options.filter(o => o.id !== optId);
+  // Remove votes for the deleted option via atomic ops
+  if (STORE) {
+    const upVotes   = upVoters(currentVotes, optId);
+    const downVotes = downVoters(currentVotes, optId);
+    if (upVotes.length || downVotes.length) {
+      const ops = [
+        ...upVotes.map(v  => ({ op: "array_remove", path: `${optId}.up`,   value: v })),
+        ...downVotes.map(v => ({ op: "array_remove", path: `${optId}.down`, value: v })),
+      ];
+      fetch(STORE, { method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: voteKey(pollId), ops }) }).catch(() => {});
+    }
+    delete currentVotes[optId];
+  }
+  await saveData();
+  render();
+}
+
+async function postPollResultActivity(poll, votes) {
+  if (!STORE) return;
+  const total = totalUpVotes(poll, votes);
+  let description;
+  if (total === 0) {
+    description = `Poll closed: "${poll.question.slice(0, 60)}" — no votes cast`;
+  } else {
+    const winId  = winningOptionId(poll, votes);
+    const winOpt = poll.options.find(o => o.id === winId);
+    const winUp  = upCount(votes, winId);
+    const participants = new Set(poll.options.flatMap(o => upVoters(votes, o.id))).size;
+    description = `Poll closed: "${poll.question.slice(0, 60)}" — ${winOpt?.text ?? "?"} won with ${winUp} vote${winUp !== 1 ? "s" : ""} (${participants} participant${participants !== 1 ? "s" : ""})`;
+  }
+  const results = poll.options
+    .map(o => ({ option: o.text, votes: upCount(votes, o.id), downvotes: downCount(votes, o.id) }))
+    .sort((a, b) => b.votes - a.votes);
+  await fetch("/api/activity", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ type: "poll_closed", actor: currentMember?.name ?? "System", description, metadata: { pollId: poll.id, results, total } }),
+  });
+}
+
+/** On load, detect polls that expired since the last check and post their results. */
+async function checkExpiredPolls() {
+  if (!STORE) return;
+  let changed = false;
+  for (const poll of data.polls) {
+    if (!isPollOpen(poll) && !poll.resultPosted) {
+      const votes = await loadPollVotes(poll.id);
+      poll.resultPosted = true;
+      changed = true;
+      postPollResultActivity(poll, votes).catch(() => {});
+    }
+  }
+  if (changed) await saveData();
+}
+
+// ─── Modal ────────────────────────────────────────────────────────────────────
+let modalEl = null;
+function openModal(html) {
+  closeModal();
+  modalEl = document.createElement("div");
+  modalEl.className = "modal-backdrop";
+  modalEl.innerHTML = `<div class="modal">${html}</div>`;
+  modalEl.addEventListener("click", e => { if (e.target === modalEl) closeModal(); });
+  document.body.appendChild(modalEl);
+}
+function closeModal() { modalEl?.remove(); modalEl = null; }
+window.closeModal = closeModal;
+
+function openCreatePollModal() {
+  settingsOpen = false;
+  openModal(`
+    <h3>Create a Poll</h3>
+
+    <div class="form-group">
+      <label>Question</label>
+      <textarea id="poll-q" placeholder="What should we have for dinner this week?" rows="2"></textarea>
+    </div>
+
+    <div class="form-group">
+      <label>Options <span style="color:var(--muted);font-weight:400">(at least 2)</span></label>
+      <div id="options-list">
+        <div class="option-input-row">
+          <input type="text" class="opt-input" placeholder="Option 1" />
+          <button class="remove-opt" title="Remove" onclick="removeOptRow(this)">×</button>
+        </div>
+        <div class="option-input-row">
+          <input type="text" class="opt-input" placeholder="Option 2" />
+          <button class="remove-opt" title="Remove" onclick="removeOptRow(this)">×</button>
+        </div>
+      </div>
+      <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="addOptRow()">+ Add option</button>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-toggle-header" onclick="toggleSettingsSection(this)">
+        ⚙️ Poll settings
+        <span id="settings-arrow">▼</span>
+      </div>
+      <div class="settings-body" id="settings-body">
+
+        <div class="num-input-row">
+          <div class="toggle-label">
+            <div class="name">Votes per person</div>
+            <div class="desc">How many options each person can vote for</div>
+          </div>
+          <input type="number" id="max-choices" min="1" max="10" value="1" style="width:70px;text-align:center" />
+        </div>
+
+        <div class="toggle-row">
+          <div class="toggle-label">
+            <div class="name">Allow downvoting</div>
+            <div class="desc">Members can thumbs-down options they dislike</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="allow-downvote" />
+            <div class="toggle-track"></div>
+            <div class="toggle-thumb"></div>
+          </label>
+        </div>
+
+        <div class="toggle-row">
+          <div class="toggle-label">
+            <div class="name">Show results before voting</div>
+            <div class="desc">Hide results until after you cast your vote</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="show-before" checked />
+            <div class="toggle-track"></div>
+            <div class="toggle-thumb"></div>
+          </label>
+        </div>
+
+        <div class="toggle-row">
+          <div class="toggle-label">
+            <div class="name">Allow adding options</div>
+            <div class="desc">Other members can suggest new options</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="allow-add" checked />
+            <div class="toggle-track"></div>
+            <div class="toggle-thumb"></div>
+          </label>
+        </div>
+
+        <div class="toggle-row">
+          <div class="toggle-label">
+            <div class="name">Anonymous voting</div>
+            <div class="desc">Hide who voted for what (show counts only)</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="anonymous" />
+            <div class="toggle-track"></div>
+            <div class="toggle-thumb"></div>
+          </label>
+        </div>
+
+        <div class="toggle-row" style="border-bottom:none">
+          <div class="toggle-label">
+            <div class="name">Expiry date</div>
+            <div class="desc">Poll automatically closes at this time</div>
+          </div>
+          <input type="datetime-local" id="expires-at" style="width:190px;font-size:0.78rem" />
+        </div>
+
+      </div>
+    </div>
+
+    <div id="create-error" class="error-msg" style="display:none"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitCreatePoll()">Create Poll</button>
+    </div>
+  `);
+}
+
+window.toggleSettingsSection = function(header) {
+  const body = document.getElementById("settings-body");
+  const arrow = document.getElementById("settings-arrow");
+  body.classList.toggle("open");
+  arrow.textContent = body.classList.contains("open") ? "▲" : "▼";
+};
+
+window.addOptRow = function() {
+  const list = document.getElementById("options-list");
+  const n = list.querySelectorAll(".opt-input").length + 1;
+  const row = document.createElement("div");
+  row.className = "option-input-row";
+  row.innerHTML = `
+    <input type="text" class="opt-input" placeholder="Option ${n}" />
+    <button class="remove-opt" title="Remove" onclick="removeOptRow(this)">×</button>
+  `;
+  list.appendChild(row);
+  row.querySelector("input").focus();
+};
+
+window.removeOptRow = function(btn) {
+  const list = document.getElementById("options-list");
+  if (list.querySelectorAll(".opt-input").length <= 2) return;
+  btn.closest(".option-input-row").remove();
+};
+
+window.submitCreatePoll = function() {
+  const q = document.getElementById("poll-q").value.trim();
+  const opts = [...document.querySelectorAll(".opt-input")]
+    .map(i => i.value.trim())
+    .filter(Boolean);
+  const errEl = document.getElementById("create-error");
+
+  if (!q) { showFormError(errEl, "Please enter a question."); return; }
+  if (opts.length < 2) { showFormError(errEl, "Add at least 2 options."); return; }
+  if (new Set(opts.map(o => o.toLowerCase())).size < opts.length) {
+    showFormError(errEl, "Options must be unique."); return;
+  }
+  errEl.style.display = "none";
+
+  createPoll({
+    question: q,
+    options: opts,
+    maxChoices: parseInt(document.getElementById("max-choices").value) || 1,
+    allowDownvote: document.getElementById("allow-downvote").checked,
+    showBeforeVoting: document.getElementById("show-before").checked,
+    allowAddOptions: document.getElementById("allow-add").checked,
+    anonymous: document.getElementById("anonymous").checked,
+    expiresAt: document.getElementById("expires-at").value || null,
+  });
+};
+
+function showFormError(el, msg) {
+  el.textContent = msg;
+  el.style.display = "block";
+}
+
+function openAddOptionModal(pollId) {
+  openModal(`
+    <h3>Suggest an Option</h3>
+    <div class="form-group">
+      <label>New option</label>
+      <input type="text" id="new-opt-text" placeholder="Your suggestion…" autofocus />
+    </div>
+    <div id="add-opt-error" class="error-msg" style="display:none"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitAddOption('${pollId}')">Add Option</button>
+    </div>
+  `);
+  setTimeout(() => document.getElementById("new-opt-text")?.focus(), 50);
+}
+
+window.submitAddOption = function(pollId) {
+  const text = document.getElementById("new-opt-text").value.trim();
+  const errEl = document.getElementById("add-opt-error");
+  if (!text) { showFormError(errEl, "Please enter an option."); return; }
+  const poll = data.polls.find(p => p.id === pollId);
+  if (poll?.options.some(o => o.text.toLowerCase() === text.toLowerCase())) {
+    showFormError(errEl, "That option already exists."); return;
+  }
+  addOption(pollId, text);
+};
+
+// ─── Rendering ────────────────────────────────────────────────────────────────
+function renderWhoScreen() {
+  document.getElementById("root").innerHTML = `
+    <div id="who-screen">
+      <div style="font-size:2.5rem;margin-bottom:12px">📊</div>
+      <h2>Family Polls</h2>
+      <p>Vote on decisions together — who are you?</p>
+      <div class="member-grid">
+        ${members.map(m => `
+          <button class="member-btn" onclick="selectMember('${m.id}')">
+            <div class="avatar" style="background:${memberColor(m.id)}">${initial(m.name)}</div>
+            <span>${m.name}</span>
+          </button>
+        `).join("")}
+      </div>
+    </div>
+  `;
+}
+
+window.selectMember = function(id) {
+  currentMember = members.find(m => m.id === id);
+  render();
+};
+
+function renderPollList() {
+  const openPolls   = data.polls.filter(p => isPollOpen(p));
+  const closedPolls = data.polls.filter(p => !isPollOpen(p));
+  const showing     = listTab === "open" ? openPolls : closedPolls;
+
+  const navHtml = `
+    <div class="page-header">
+      <div>
+        <h1>Polls</h1>
+        <div class="who" style="margin-top:2px">
+          ${currentMember.name}
+          ${HUB_MEMBER ? "" : `<button class="btn btn-ghost btn-sm" style="margin-left:6px" onclick="switchMember()">Switch</button>`}
+        </div>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="openCreatePollModal()">+ New Poll</button>
+    </div>
+
+    <div class="tabs">
+      <button class="tab ${listTab === "open" ? "active" : ""}" onclick="setListTab('open')">
+        Open${openPolls.length > 0 ? ` (${openPolls.length})` : ""}
+      </button>
+      <button class="tab ${listTab === "closed" ? "active" : ""}" onclick="setListTab('closed')">
+        Closed${closedPolls.length > 0 ? ` (${closedPolls.length})` : ""}
+      </button>
+    </div>
+  `;
+
+  const listHtml = showing.length === 0
+    ? `<div class="empty">
+        <div class="empty-icon">${listTab === "open" ? "🗳️" : "📋"}</div>
+        <p>${listTab === "open" ? "No open polls. Create one to get the family voting!" : "No closed polls yet."}</p>
+       </div>`
+    : showing.map(poll => renderPollCard(poll)).join("");
+
+  document.getElementById("root").innerHTML = navHtml + listHtml;
+}
+
+function renderPollCard(poll) {
+  const status   = pollStatus(poll);
+  // Use cached total if we've opened this poll before, otherwise just show option count
+  const totalVotes = voteTotalCache[poll.id];
+  const voted    = false; // We don't load votes on the list — open poll to vote
+  const expiry   = expiryLabel(poll);
+  const statusBadge = status === "open"
+    ? `<span class="badge badge-open">Open</span>`
+    : status === "expired"
+      ? `<span class="badge badge-expired">Expired</span>`
+      : `<span class="badge badge-closed">Closed</span>`;
+
+  const voteInfo = totalVotes !== undefined
+    ? `${totalVotes} vote${totalVotes !== 1 ? "s" : ""}`
+    : `${poll.options.length} option${poll.options.length !== 1 ? "s" : ""}`;
+
+  return `
+    <div class="poll-card" onclick="openPoll('${poll.id}')">
+      <div class="poll-card-inner">
+        <div class="poll-question">${esc(poll.question)}</div>
+        <div class="poll-meta">
+          ${statusBadge}
+          <span class="poll-stats">${voteInfo}</span>
+          ${expiry ? `<span class="expiry-note ${expiry === "Expires soon" ? "soon" : ""}">⏱ ${expiry}</span>` : ""}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderPollDetail(poll) {
+  const votes        = currentVotes; // loaded separately, atomic
+  const open         = isPollOpen(poll);
+  const status       = pollStatus(poll);
+  const memberId     = currentMember.id;
+  const voted        = hasVoted(poll, votes, memberId);
+  const usedVotes    = votesUsed(poll, votes, memberId);
+  const maxChoices   = poll.settings.maxChoices;
+  const showResults  = poll.settings.showBeforeVoting || voted || !open;
+  const totalUp      = totalUpVotes(poll, votes);
+  const winning      = showResults ? winningOptionId(poll, votes) : null;
+  const myUpVotes    = memberUpVotedOptions(poll, votes, memberId);
+  const myDownVotes  = memberDownVotedOptions(poll, votes, memberId);
+  const isAnon       = poll.settings.anonymous;
+  const expiry       = expiryLabel(poll);
+  const creator      = memberById(poll.createdBy);
+
+  // Vote hint text
+  let hintHtml = "";
+  if (open) {
+    if (maxChoices === 1) {
+      hintHtml = voted
+        ? `<div class="vote-hint exhausted">✓ You've voted — tap your choice again to change it.</div>`
+        : `<div class="vote-hint">Tap an option to cast your vote.</div>`;
+    } else {
+      const remaining = maxChoices - usedVotes;
+      hintHtml = remaining === 0
+        ? `<div class="vote-hint exhausted">✓ All ${maxChoices} votes cast — tap a choice to remove it.</div>`
+        : `<div class="vote-hint">${remaining} vote${remaining !== 1 ? "s" : ""} remaining (${maxChoices} total per person).</div>`;
+    }
+  }
+
+  // Hidden results banner
+  const hiddenBanner = !poll.settings.showBeforeVoting && !voted && open
+    ? `<div class="hidden-results-banner">🔒 Results hidden until you vote</div>`
+    : "";
+
+  // Option rows
+  const maxUp = Math.max(...poll.options.map(o => upCount(votes, o.id)), 1);
+  const optionsHtml = poll.options.map(opt => {
+    const ups      = upCount(votes, opt.id);
+    const downs    = downCount(votes, opt.id);
+    const net      = ups - downs;
+    const pct      = showResults ? Math.round((ups / Math.max(totalUp, 1)) * 100) : 0;
+    const barPct   = showResults ? Math.round((ups / maxUp) * 100) : 0;
+    const isWin    = showResults && opt.id === winning && ups > 0;
+    const iUpvoted = myUpVotes.includes(opt.id);
+    const iDnvoted = myDownVotes.includes(opt.id);
+    const canVote  = open && (!iUpvoted ? (maxChoices === 1 || usedVotes < maxChoices) : true);
+    const canDown  = open && poll.settings.allowDownvote;
+    const addedBy  = memberById(opt.addedBy);
+
+    // Voters display
+    let votersHtml = "";
+    if (showResults && !isAnon) {
+      const upNames  = upVoters(votes, opt.id).map(id => memberById(id)).filter(Boolean);
+      const dnNames  = downVoters(votes, opt.id).map(id => memberById(id)).filter(Boolean);
+      if (upNames.length > 0 || dnNames.length > 0) {
+        votersHtml = `<div class="voters">
+          ${upNames.map(m => `
+            <span class="voter-chip">
+              <span class="avatar-sm" style="background:${memberColor(m.id)}">${initial(m.name)}</span>
+              ${m.name}
+            </span>
+          `).join("")}
+          ${dnNames.map(m => `
+            <span class="voter-chip downvoter">
+              <span class="avatar-sm" style="background:#ef4444">${initial(m.name)}</span>
+              ${m.name} 👎
+            </span>
+          `).join("")}
+        </div>`;
+      }
+    }
+
+    // Score display
+    const scoreHtml = showResults
+      ? poll.settings.allowDownvote
+        ? `<span class="vote-count ${net > 0 ? "net-pos" : net < 0 ? "net-neg" : ""}">${net > 0 ? "+" : ""}${net}</span>`
+        : `<span class="vote-count up">${ups}</span>`
+      : "";
+
+    const optAddedNote = addedBy && addedBy.id !== poll.createdBy
+      ? `<span style="font-size:0.7rem;color:var(--muted)"> · added by ${addedBy.name}</span>`
+      : "";
+
+    const canDelete = canModerate(poll) && poll.options.length > 2 && open;
+
+    return `
+      <div class="option-row">
+        <div class="option-top">
+          <div class="option-text">
+            ${esc(opt.text)}${optAddedNote}
+          </div>
+          <div class="option-vote-btns">
+            ${scoreHtml}
+            ${open ? `
+              <button class="btn-icon up ${iUpvoted ? "voted" : ""}"
+                ${!canVote && !iUpvoted ? "disabled" : ""}
+                onclick="castVote('${poll.id}','${opt.id}','up')"
+                title="${iUpvoted ? "Remove vote" : "Upvote"}">▲</button>
+            ` : ""}
+            ${canDown ? `
+              <button class="btn-icon down ${iDnvoted ? "voted" : ""}"
+                onclick="castVote('${poll.id}','${opt.id}','down')"
+                title="${iDnvoted ? "Remove downvote" : "Downvote"}">▼</button>
+            ` : ""}
+            ${canDelete ? `
+              <button class="btn-icon" style="font-size:.8rem;color:var(--muted)"
+                onclick="deleteOption('${poll.id}','${opt.id}')" title="Remove option">×</button>
+            ` : ""}
+          </div>
+        </div>
+        ${showResults ? `
+          <div class="vote-bar-wrap">
+            <div class="vote-bar-fill ${isWin ? "winning" : ""}" style="width:${barPct}%"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-top:3px">
+            <div style="font-size:0.72rem;color:var(--muted)">${ups} vote${ups !== 1 ? "s" : ""}${poll.settings.allowDownvote && downs > 0 ? `, ${downs} 👎` : ""}</div>
+            <div style="font-size:0.72rem;color:var(--muted)">${pct}%</div>
+          </div>
+        ` : ""}
+        ${votersHtml}
+      </div>
+    `;
+  }).join("");
+
+  // Header badges
+  const statusBadge = status === "open"
+    ? `<span class="badge badge-open">Open</span>`
+    : status === "expired"
+      ? `<span class="badge badge-expired">Expired</span>`
+      : `<span class="badge badge-closed">Closed</span>`;
+
+  const settingsChips = [
+    maxChoices > 1 ? `${maxChoices} votes/person` : null,
+    poll.settings.allowDownvote ? "Downvoting" : null,
+    isAnon ? "Anonymous" : null,
+    !poll.settings.showBeforeVoting ? "Results after voting" : null,
+    poll.settings.allowAddOptions ? "Open suggestions" : null,
+  ].filter(Boolean);
+
+  const actionsHtml = canModerate(poll) ? `
+    <div class="poll-actions">
+      ${open
+        ? `<button class="btn btn-ghost btn-sm" onclick="closePoll('${poll.id}')">🔒 Close poll</button>`
+        : `<button class="btn btn-ghost btn-sm" onclick="reopenPoll('${poll.id}')">🔓 Reopen poll</button>`
+      }
+      ${poll.settings.allowAddOptions && open ? `<button class="btn btn-ghost btn-sm" onclick="openAddOptionModal('${poll.id}')">+ Add option</button>` : ""}
+      <button class="btn btn-ghost btn-sm" style="color:var(--red);border-color:var(--red);opacity:.7" onclick="deletePoll('${poll.id}')">Delete</button>
+    </div>
+  ` : poll.settings.allowAddOptions && open ? `
+    <div class="poll-actions">
+      <button class="btn btn-ghost btn-sm" onclick="openAddOptionModal('${poll.id}')">+ Suggest an option</button>
+    </div>
+  ` : "";
+
+  document.getElementById("root").innerHTML = `
+    <button class="back-btn" onclick="backToList()">← All Polls</button>
+
+    <div class="poll-detail-header">
+      <div class="poll-detail-question">${esc(poll.question)}</div>
+      <div class="poll-detail-meta">
+        ${statusBadge}
+        <span>${totalUp} vote${totalUp !== 1 ? "s" : ""}</span>
+        ${creator ? `<span>by ${creator.name}</span>` : ""}
+        ${expiry ? `<span class="expiry-note ${expiry === "Expires soon" ? "soon" : ""}">⏱ ${expiry}</span>` : ""}
+      </div>
+      ${settingsChips.length > 0 ? `
+        <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
+          ${settingsChips.map(c => `<span class="badge" style="background:#f1f5f9;color:var(--muted)">${c}</span>`).join("")}
+        </div>
+      ` : ""}
+    </div>
+
+    ${!open ? `<div class="closed-banner">${status === "expired" ? "⏰ This poll has expired." : "🔒 This poll has been closed."} Results are final.</div>` : ""}
+    ${hintHtml}
+    ${hiddenBanner}
+
+    <div class="card" style="overflow:hidden">
+      ${optionsHtml}
+      ${actionsHtml}
+    </div>
+
+    <div style="text-align:center;margin-top:16px">
+      <button class="btn btn-ghost btn-sm" onclick="backToList()">← Back to polls</button>
+    </div>
+  `;
+}
+
+// ─── Navigation ───────────────────────────────────────────────────────────────
+window.openPoll = async function(id) {
+  currentPollId = id;
+  currentVotes  = {};
+  render(); // render immediately with empty votes while loading
+  currentVotes = await loadPollVotes(id);
+  voteTotalCache[id] = totalUpVotes(data.polls.find(p => p.id === id) ?? { options: [] }, currentVotes);
+  render(); // re-render with votes loaded
+};
+window.backToList     = function()   { currentPollId = null; currentVotes = {}; render(); };
+window.switchMember   = function()   { if (HUB_MEMBER) return; currentMember = null; currentPollId = null; currentVotes = {}; render(); };
+window.setListTab     = function(t)  { listTab = t; render(); };
+window.openCreatePollModal = openCreatePollModal;
+window.openAddOptionModal  = openAddOptionModal;
+window.castVote            = castVote;
+window.closePoll           = closePoll;
+window.reopenPoll          = reopenPoll;
+window.deletePoll          = deletePoll;
+window.deleteOption        = deleteOption;
+
+// ─── Render ───────────────────────────────────────────────────────────────────
+function render() {
+  if (!currentMember) { renderWhoScreen(); return; }
+  if (currentPollId)  {
+    const poll = data.polls.find(p => p.id === currentPollId);
+    if (poll) { renderPollDetail(poll); return; }
+    currentPollId = null;
+  }
+  renderPollList();
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+(async () => {
+  await Promise.all([loadMembers(), loadData()]);
+  // If the hub provided identity, find the matching member record and auto-select
+  if (HUB_MEMBER) {
+    currentMember = members.find(m => m.id === HUB_MEMBER.id) ?? null;
+  }
+  render();
+  // Fire-and-forget — post activity for any polls that expired since last load
+  checkExpiredPolls().catch(() => {});
+})();
+</script>
+</body>
+</html>

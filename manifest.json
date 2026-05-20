@@ -1,0 +1,27 @@
+{
+  "id": "family-polls",
+  "name": "Family Polls",
+  "version": "1.0.0",
+  "description": "Create polls for family decisions — dinner choices, weekend plans, movie night votes, and more.",
+  "entrypoint": "index.html",
+  "runtime": "static",
+  "category": "family",
+  "tags": ["polls", "voting", "decisions", "everyone"],
+  "data_access": {
+    "reads": ["family.members"],
+    "writes": []
+  },
+  "permissions": {
+    "default_audience": "everyone",
+    "requires_approval": false
+  },
+  "storage": "kv",
+  "publishes": ["poll.created", "poll.closed"],
+  "alert_on": ["poll.created", "poll.closed"],
+  "widget": { "label": "Polls", "size": "small" },
+  "resource_limits": {
+    "max_store_bytes": 524288,
+    "max_store_reads_per_day": 500,
+    "max_store_writes_per_day": 300
+  }
+}
