@@ -804,7 +804,7 @@ async function reopenPoll(pollId) {
 }
 
 async function deletePoll(pollId) {
-  if (!confirm("Delete this poll? This cannot be undone.")) return;
+  if (!await hubConfirm({ message: "Delete this poll?", description: "This cannot be undone.", confirmLabel: "Delete poll", destructive: true })) return;
   data.polls = data.polls.filter(p => p.id !== pollId);
   currentPollId = null;
   currentVotes = {};
@@ -817,7 +817,7 @@ async function deletePoll(pollId) {
 async function deleteOption(pollId, optId) {
   const poll = data.polls.find(p => p.id === pollId);
   if (!poll || poll.options.length <= 2) return;
-  if (!confirm("Remove this option?")) return;
+  if (!await hubConfirm({ message: "Remove this option?", confirmLabel: "Remove" })) return;
   poll.options = poll.options.filter(o => o.id !== optId);
   // Remove votes for the deleted option via atomic ops
   if (STORE) {
