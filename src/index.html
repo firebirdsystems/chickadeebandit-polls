@@ -767,6 +767,10 @@ async function createPoll(pollData) {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ authorName: "Household Polls", body: `📊 New poll from ${creator}: "${poll.question}"`, url: `/run/${APP_ID}` }),
     }).catch(() => {});
+    fetch("/api/events", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ source_app_id: APP_ID, type: "poll.created", subject_id: id, payload: { question: poll.question, creator } }),
+    }).catch(() => {});
   }
 
   currentPollId = id;
@@ -792,6 +796,12 @@ async function closePoll(pollId) {
     postPollResultActivity(poll, currentVotes).catch(() => {});
   }
   await saveData();
+  if (STORE) {
+    fetch("/api/events", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ source_app_id: APP_ID, type: "poll.closed", subject_id: pollId, payload: { question: poll.question } }),
+    }).catch(() => {});
+  }
   render();
 }
 
