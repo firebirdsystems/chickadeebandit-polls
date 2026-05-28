@@ -1,11 +1,11 @@
 {
   "id": "family-polls",
-  "name": "Family Polls",
+  "name": "Polls",
   "version": "1.0.0",
-  "description": "Create polls for family decisions — dinner choices, weekend plans, movie night votes, and more.",
+  "description": "Create polls — dinner choices, weekend plans, movie night votes, and more.",
   "entrypoint": "index.html",
   "runtime": "static",
-  "category": "family",
+  "category": "general",
   "tags": [
     "polls",
     "voting",
