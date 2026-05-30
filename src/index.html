@@ -603,6 +603,7 @@ let data          = { polls: [] }; // poll metadata — no votes stored here
 let currentVotes  = {};     // votes for the currently open poll: { optId: { up: [], down: [] } }
 let voteTotalCache = {};    // { pollId: number } — total upvotes, filled when a poll is opened
 let settingsOpen  = false;
+let pendingDeepLinkPollId = null; // set when a ?pollId arrives before member selection
 
 // ─── Member helpers ───────────────────────────────────────────────────────────
 function memberById(id) { return members.find(m => m.id === id); }
@@ -771,6 +772,15 @@ async function createPoll(pollData) {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ source_app_id: APP_ID, type: "poll.created", subject_id: id, payload: { question: poll.question, creator } }),
     }).catch(() => {});
+    fetch("/api/activity", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "poll_created",
+        actor: creator,
+        description: `${creator} created a new poll: "${poll.question.slice(0, 60)}"`,
+        metadata: { deepLink: { appId: APP_ID, params: { pollId: id } } },
+      }),
+    }).catch(() => {});
   }
 
   currentPollId = id;
@@ -865,7 +875,12 @@ async function postPollResultActivity(poll, votes) {
     .sort((a, b) => b.votes - a.votes);
   await fetch("/api/activity", {
     method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ type: "poll_closed", actor: currentMember?.name ?? "System", description, metadata: { pollId: poll.id, results, total } }),
+    body: JSON.stringify({
+      type: "poll_closed",
+      actor: currentMember?.name ?? "System",
+      description,
+      metadata: { pollId: poll.id, results, total, deepLink: { appId: APP_ID, params: { pollId: poll.id } } },
+    }),
   });
 }
 
@@ -1109,7 +1124,13 @@ function renderWhoScreen() {
 
 window.selectMember = function(id) {
   currentMember = members.find(m => m.id === id);
-  render();
+  if (pendingDeepLinkPollId) {
+    const pollId = pendingDeepLinkPollId;
+    pendingDeepLinkPollId = null;
+    openPoll(pollId);
+  } else {
+    render();
+  }
 };
 
 function renderPollList() {
@@ -1400,6 +1421,18 @@ function render() {
   renderPollList();
 }
 
+// ─── Deep linking ─────────────────────────────────────────────────────────────
+function handleDeepLink() {
+  const pollId = new URLSearchParams(window.location.search).get("pollId");
+  if (!pollId) return;
+  if (currentMember) {
+    openPoll(pollId);
+  } else {
+    // Who screen is showing — apply after member selection
+    pendingDeepLinkPollId = pollId;
+  }
+}
+
 // ─── Init ─────────────────────────────────────────────────────────────────────
 (async () => {
   await Promise.all([loadMembers(), loadData()]);
@@ -1408,6 +1441,7 @@ function render() {
     currentMember = members.find(m => m.id === HUB_MEMBER.id) ?? null;
   }
   render();
+  handleDeepLink();
   // Fire-and-forget — post activity for any polls that expired since last load
   checkExpiredPolls().catch(() => {});
 })();
