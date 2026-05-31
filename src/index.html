@@ -768,9 +768,9 @@ async function createPoll(pollData) {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ authorName: "Household Polls", body: `📊 New poll from ${creator}: "${poll.question}"`, url: `/run/${APP_ID}` }),
     }).catch(() => {});
-    fetch("/api/events", {
+    fetch(`/run/${APP_ID}/api/events`, {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ source_app_id: APP_ID, type: "poll.created", subject_id: id, payload: { question: poll.question, creator } }),
+      body: JSON.stringify({ type: "poll.created", subject_id: id, payload: { question: poll.question, creator } }),
     }).catch(() => {});
     fetch("/api/activity", {
       method: "POST", headers: { "Content-Type": "application/json" },
@@ -807,9 +807,9 @@ async function closePoll(pollId) {
   }
   await saveData();
   if (STORE) {
-    fetch("/api/events", {
+    fetch(`/run/${APP_ID}/api/events`, {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ source_app_id: APP_ID, type: "poll.closed", subject_id: pollId, payload: { question: poll.question } }),
+      body: JSON.stringify({ type: "poll.closed", subject_id: pollId, payload: { question: poll.question } }),
     }).catch(() => {});
   }
   render();
