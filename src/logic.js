@@ -49,8 +49,8 @@ export function expiryLabel(poll) {
   if (!poll.settings.expiresAt) return null;
   const diff = new Date(poll.settings.expiresAt) - new Date();
   if (diff < 0) return "Expired";
-  const h = Math.floor(diff / 3600000);
-  if (h < 1) return "Expires soon";
+  if (diff < 3600000) return "Expires soon";
+  const h = Math.round(diff / 3600000);
   if (h < 24) return `Expires in ${h}h`;
   return `Expires in ${Math.ceil(diff / 86400000)}d`;
 }
