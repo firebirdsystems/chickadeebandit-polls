@@ -121,33 +121,6 @@
     .page-header h1 { font-size: 1.25rem; font-weight: 700; }
     .page-header .who { font-size: 0.82rem; color: var(--muted); }
 
-    /* ── Who screen ─────────────────────────────────────── */
-    #who-screen { text-align: center; padding: 48px 16px; }
-    #who-screen h2 { font-size: 1.5rem; font-weight: 700; margin-bottom: 6px; }
-    #who-screen p { color: var(--muted); margin-bottom: 32px; }
-    .member-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-      gap: 12px;
-      max-width: 420px;
-      margin: 0 auto;
-    }
-    .member-btn {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 8px;
-      padding: 20px 10px;
-      background: var(--card);
-      border: 2px solid var(--border);
-      border-radius: var(--radius);
-      cursor: pointer;
-      font-size: 0.88rem;
-      font-weight: 600;
-      color: var(--text);
-      transition: all .15s;
-    }
-    .member-btn:hover { border-color: var(--accent); background: var(--accent-light); }
     .avatar {
       width: 44px; height: 44px;
       border-radius: 50%;
@@ -603,7 +576,6 @@ let data          = { polls: [] }; // poll metadata — no votes stored here
 let currentVotes  = {};     // votes for the currently open poll: { optId: { up: [], down: [] } }
 let voteTotalCache = {};    // { pollId: number } — total upvotes, filled when a poll is opened
 let settingsOpen  = false;
-let pendingDeepLinkPollId = null; // set when a ?pollId arrives before member selection
 
 // ─── Member helpers ───────────────────────────────────────────────────────────
 function memberById(id) { return members.find(m => m.id === id); }
@@ -1104,35 +1076,6 @@ window.submitAddOption = function(pollId) {
 };
 
 // ─── Rendering ────────────────────────────────────────────────────────────────
-function renderWhoScreen() {
-  document.getElementById("root").innerHTML = `
-    <div id="who-screen">
-      <div style="font-size:2.5rem;margin-bottom:12px">📊</div>
-      <h2>Family Polls</h2>
-      <p>Vote on decisions together — who are you?</p>
-      <div class="member-grid">
-        ${members.map(m => `
-          <button class="member-btn" onclick="selectMember('${m.id}')">
-            <div class="avatar" style="background:${memberColor(m.id)}">${initial(m.name)}</div>
-            <span>${m.name}</span>
-          </button>
-        `).join("")}
-      </div>
-    </div>
-  `;
-}
-
-window.selectMember = function(id) {
-  currentMember = members.find(m => m.id === id);
-  if (pendingDeepLinkPollId) {
-    const pollId = pendingDeepLinkPollId;
-    pendingDeepLinkPollId = null;
-    openPoll(pollId);
-  } else {
-    render();
-  }
-};
-
 function renderPollList() {
   const openPolls   = data.polls.filter(p => isPollOpen(p));
   const closedPolls = data.polls.filter(p => !isPollOpen(p));
@@ -1144,7 +1087,6 @@ function renderPollList() {
         <h1>Polls</h1>
         <div class="who" style="margin-top:2px">
           ${currentMember.name}
-          ${HUB_MEMBER ? "" : `<button class="btn btn-ghost btn-sm" style="margin-left:6px" onclick="switchMember()">Switch</button>`}
         </div>
       </div>
       <button class="btn btn-primary btn-sm" onclick="openCreatePollModal()">+ New Poll</button>
@@ -1400,7 +1342,6 @@ window.openPoll = async function(id) {
   render(); // re-render with votes loaded
 };
 window.backToList     = function()   { currentPollId = null; currentVotes = {}; render(); };
-window.switchMember   = function()   { if (HUB_MEMBER) return; currentMember = null; currentPollId = null; currentVotes = {}; render(); };
 window.setListTab     = function(t)  { listTab = t; render(); };
 window.openCreatePollModal = openCreatePollModal;
 window.openAddOptionModal  = openAddOptionModal;
@@ -1412,7 +1353,6 @@ window.deleteOption        = deleteOption;
 
 // ─── Render ───────────────────────────────────────────────────────────────────
 function render() {
-  if (!currentMember) { renderWhoScreen(); return; }
   if (currentPollId)  {
     const poll = data.polls.find(p => p.id === currentPollId);
     if (poll) { renderPollDetail(poll); return; }
@@ -1425,12 +1365,7 @@ function render() {
 function handleDeepLink() {
   const pollId = new URLSearchParams(window.location.search).get("pollId");
   if (!pollId) return;
-  if (currentMember) {
-    openPoll(pollId);
-  } else {
-    // Who screen is showing — apply after member selection
-    pendingDeepLinkPollId = pollId;
-  }
+  openPoll(pollId);
 }
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
