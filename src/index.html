@@ -569,6 +569,7 @@ const HUB_MEMBER = window.__CURRENT_MEMBER ?? null;
 
 // ─── State ────────────────────────────────────────────────────────────────────
 let members       = [];
+let membersById   = new Map();
 let currentMember = null;   // null = who screen (only shown when HUB_MEMBER is null)
 let currentPollId = null;   // null = list view
 let listTab       = "open"; // "open" | "closed"
@@ -578,7 +579,7 @@ let voteTotalCache = {};    // { pollId: number } — total upvotes, filled when
 let settingsOpen  = false;
 
 // ─── Member helpers ───────────────────────────────────────────────────────────
-function memberById(id) { return members.find(m => m.id === id); }
+function memberById(id) { return membersById.get(id); }
 
 function canModerate(poll) {
   if (!currentMember) return false;
@@ -638,15 +639,33 @@ async function loadMembers() {
       { id: "demo-3", name: "Casey", role: "child" },
       { id: "demo-4", name: "Riley", role: "child" },
     ];
+    membersById = new Map(members.map(m => [m.id, m]));
     return;
   }
   try {
     const res = await fetch(`${CONTEXT}?keys=family.members`);
     members = ((await res.json())["family.members"]) ?? [];
   } catch { members = []; }
+  membersById = new Map(members.map(m => [m.id, m]));
 }
 
 // ─── Actions ──────────────────────────────────────────────────────────────────
+
+function applyVoteOps(votes, ops) {
+  const result = structuredClone(votes);
+  for (const op of ops) {
+    const [optId, field] = op.path.split(".");
+    if (!result[optId]) result[optId] = { up: [], down: [] };
+    if (op.op === "array_remove") {
+      result[optId][field] = (result[optId][field] ?? []).filter(v => v !== op.value);
+    } else if (op.op === "array_append") {
+      if (!(result[optId][field] ?? []).includes(op.value)) {
+        result[optId][field] = [...(result[optId][field] ?? []), op.value];
+      }
+    }
+  }
+  return result;
+}
 
 /**
  * Cast or toggle a vote using an atomic PATCH op.
@@ -688,6 +707,11 @@ async function castVote(pollId, optId, direction) {
 
   if (ops.length === 0) return;
 
+  // Apply optimistically so the UI responds immediately
+  currentVotes = applyVoteOps(votes, ops);
+  voteTotalCache[pollId] = totalUpVotes(poll, currentVotes);
+  render();
+
   // PATCH is atomic — server reads, applies ops, writes in one transaction
   const res = await fetch(STORE, {
     method: "PATCH",
@@ -696,8 +720,8 @@ async function castVote(pollId, optId, direction) {
   });
   if (!res.ok) return;
   const { value } = await res.json();
-  // Update local state from server's authoritative result
-  currentVotes = value ?? votes;
+  // Reconcile with server's authoritative result
+  currentVotes = value ?? currentVotes;
   voteTotalCache[pollId] = totalUpVotes(poll, currentVotes);
   render();
 }
@@ -722,10 +746,13 @@ async function createPoll(pollData) {
     },
   };
   data.polls.unshift(poll);
-  await saveData();
   currentVotes = {};
   voteTotalCache[id] = 0;
+  currentPollId = id;
+  closeModal();
+  render();
 
+  saveData().catch(() => {});
   if (STORE) {
     const creator = currentMember.name;
     fetch("/api/notifications/send", {
@@ -755,18 +782,15 @@ async function createPoll(pollData) {
     }).catch(() => {});
   }
 
-  currentPollId = id;
-  closeModal();
-  render();
 }
 
 async function addOption(pollId, text) {
   const poll = data.polls.find(p => p.id === pollId);
   if (!poll || !isPollOpen(poll)) return;
   poll.options.push({ id: crypto.randomUUID(), text, addedBy: currentMember.id });
-  await saveData();
   closeModal();
   render();
+  saveData().catch(() => {});
 }
 
 async function closePoll(pollId) {
@@ -777,22 +801,22 @@ async function closePoll(pollId) {
     poll.resultPosted = true;
     postPollResultActivity(poll, currentVotes).catch(() => {});
   }
-  await saveData();
+  render();
+  saveData().catch(() => {});
   if (STORE) {
     fetch(`/run/${APP_ID}/api/events`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ type: "poll.closed", subject_id: pollId, payload: { question: poll.question } }),
     }).catch(() => {});
   }
-  render();
 }
 
 async function reopenPoll(pollId) {
   const poll = data.polls.find(p => p.id === pollId);
   if (!poll) return;
   poll.closed = false;
-  await saveData();
   render();
+  saveData().catch(() => {});
 }
 
 async function deletePoll(pollId) {
@@ -800,10 +824,10 @@ async function deletePoll(pollId) {
   data.polls = data.polls.filter(p => p.id !== pollId);
   currentPollId = null;
   currentVotes = {};
-  await saveData();
+  render();
+  saveData().catch(() => {});
   // Clean up the vote key too
   if (STORE) fetch(`${STORE}?key=${encodeURIComponent(voteKey(pollId))}`, { method: "DELETE" }).catch(() => {});
-  render();
 }
 
 async function deleteOption(pollId, optId) {
@@ -825,8 +849,8 @@ async function deleteOption(pollId, optId) {
     }
     delete currentVotes[optId];
   }
-  await saveData();
   render();
+  saveData().catch(() => {});
 }
 
 async function postPollResultActivity(poll, votes) {
