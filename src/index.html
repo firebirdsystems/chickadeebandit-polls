@@ -755,7 +755,7 @@ async function createPoll(pollData) {
   saveData().catch(() => {});
   if (STORE) {
     const creator = currentMember.name;
-    fetch("/api/notifications/send", {
+    fetch(window.__NOTIFY_URL ?? "/api/notifications/send", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         title: `New poll: ${poll.question.slice(0, 60)}`,
@@ -771,7 +771,7 @@ async function createPoll(pollData) {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ type: "poll.created", subject_id: id, payload: { question: poll.question, creator } }),
     }).catch(() => {});
-    fetch("/api/activity", {
+    fetch(window.__ACTIVITY_URL ?? "/api/activity", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         type: "poll_created",
@@ -869,7 +869,7 @@ async function postPollResultActivity(poll, votes) {
   const results = poll.options
     .map(o => ({ option: o.text, votes: upCount(votes, o.id), downvotes: downCount(votes, o.id) }))
     .sort((a, b) => b.votes - a.votes);
-  await fetch("/api/activity", {
+  await fetch(window.__ACTIVITY_URL ?? "/api/activity", {
     method: "POST", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       type: "poll_closed",
