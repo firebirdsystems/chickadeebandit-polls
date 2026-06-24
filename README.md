@@ -1,24 +1,11 @@
-# Family Polls
+# Polls
 
-A [Chickadee Bandit](http://chickadeebandit.com) app.
+A simple Chickadee Bandit family polling app.
 
-Create polls for family decisions — dinner choices, weekend plans, movie night votes, and more.
+- Adults create polls with fixed choices.
+- Each household member may cast one final vote.
+- Voters can see their own selection.
+- Adults can see the full tally.
 
-## Features
-
-- Create polls with multiple options and an optional expiry time
-- Up/down voting with configurable vote limits per member
-- Winning option highlighted when a poll closes or expires
-- Notifies the household when a poll is created or closed
-
-## Install
-
-In your hub, go to **Apps → Install from URL** and paste:
-
-```
-https://github.com/firebirdsystems/chickadeebandit-polls/releases/latest/download/bundle.json
-```
-
-## Development
-
-See the [app-template](https://github.com/firebirdsystems/chickadeebandit-app-template) for build instructions and the full manifest field reference.
+Votes are submitted through the Hub's manifest-driven response endpoint. Direct
+database writes to votes and receipts are disabled by row policy.

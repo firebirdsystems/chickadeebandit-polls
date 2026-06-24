@@ -1,41 +1,80 @@
-import { readFileSync } from "fs";
-import { fileURLToPath } from "url";
+import { existsSync, readFileSync } from "fs";
 import { dirname, join } from "path";
-import { describe, it, expect } from "vitest";
+import { fileURLToPath } from "url";
+import { describe, expect, it } from "vitest";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const manifest = JSON.parse(readFileSync(join(__dirname, "../manifest.json"), "utf-8"));
+const root = join(__dirname, "..");
+const manifest = JSON.parse(readFileSync(join(root, "manifest.json"), "utf8"));
+const migration = readFileSync(join(root, "migrations/001_init.sql"), "utf8");
 
-const VALID_STORAGE   = ["kv", "db", "none"];
-const VALID_AUDIENCES = ["everyone", "adults", "children"];
+describe("manifest", () => {
+  it("declares the DB app basics", () => {
+    expect(manifest.id).toBe("family-polls");
+    expect(manifest.version).toMatch(/^2\.\d+\.\d+$/);
+    expect(manifest.storage).toBe("db");
+    expect(manifest.data_access.reads).toEqual(["family.members"]);
+  });
 
-describe("manifest.json", () => {
-  it("has required string fields", () => {
-    for (const field of ["id", "name", "version", "description", "entrypoint", "runtime", "icon"]) {
-      expect(manifest[field], `missing field: ${field}`).toBeTruthy();
+  it("allows only adults to create or modify poll rows", () => {
+    expect(manifest.row_policies.polls).toEqual({ kind: "adult_writable" });
+  });
+
+  it("makes votes endpoint-only while retaining attributed reads", () => {
+    expect(manifest.row_policies.votes).toEqual({
+      kind: "owner_only",
+      member_column: "member_id",
+      adults_bypass: true,
+      endpoint_writes_only: true,
+    });
+  });
+
+  it("makes receipts private, immutable, and endpoint-only", () => {
+    expect(manifest.row_policies.vote_receipts).toEqual({
+      kind: "owner_only",
+      member_column: "member_id",
+      adults_bypass: false,
+      member_can_update: false,
+      endpoint_writes_only: true,
+    });
+  });
+
+  it("uses attributed one-shot response submission", () => {
+    expect(manifest.anonymous_responses).toMatchObject({
+      receipt_table: "vote_receipts",
+      response_table: "votes",
+      response_member_column: "member_id",
+      response_answer_column: "option_id",
+      session_table: "polls",
+      session_status_column: "status",
+      session_open_value: "open",
+    });
+    expect(manifest.anonymous_responses.response_question_column).toBeUndefined();
+    expect(manifest.anonymous_responses.session_anonymous_column).toBeUndefined();
+  });
+
+  it("publishes only an adult-gated creation event", () => {
+    expect(manifest.publishes).toEqual(["poll.created"]);
+    expect(manifest.publish_acls["poll.created"].require_role).toBe("adult");
+    expect(manifest.alert_on).toEqual(["poll.created"]);
+    expect(manifest.notification_acls).toBeUndefined();
+  });
+});
+
+describe("migration", () => {
+  it("exists and defines only polls, votes, and receipts", () => {
+    expect(existsSync(join(root, "migrations/001_init.sql"))).toBe(true);
+    for (const table of ["polls", "votes", "vote_receipts"]) {
+      expect(migration).toMatch(new RegExp(`CREATE TABLE IF NOT EXISTS app_family_polls__${table}`));
     }
+    expect(migration).not.toMatch(/app_family_polls__options/);
   });
 
-  it("entrypoint is index.html", () => expect(manifest.entrypoint).toBe("index.html"));
-  it("runtime is static",        () => expect(manifest.runtime).toBe("static"));
-
-  it("storage is declared and valid", () => {
-    expect(manifest.storage, "storage field is required").toBeTruthy();
-    expect(VALID_STORAGE).toContain(manifest.storage);
+  it("stores fixed choices on the poll", () => {
+    expect(migration).toMatch(/options_json\s+TEXT\s+NOT NULL/i);
   });
 
-  it("version follows semver", () => expect(manifest.version).toMatch(/^\d+\.\d+\.\d+$/));
-
-  it("permissions.default_audience is valid", () => {
-    expect(VALID_AUDIENCES).toContain(manifest.permissions.default_audience);
-  });
-
-  it("permissions.requires_approval is boolean", () => {
-    expect(typeof manifest.permissions.requires_approval).toBe("boolean");
-  });
-
-  it("data_access has reads and writes arrays", () => {
-    expect(Array.isArray(manifest.data_access.reads)).toBe(true);
-    expect(Array.isArray(manifest.data_access.writes)).toBe(true);
+  it("enforces one vote per member per poll", () => {
+    expect(migration).toMatch(/UNIQUE \(poll_id, member_id\)/i);
   });
 });

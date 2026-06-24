@@ -1,45 +1,67 @@
 {
   "id": "family-polls",
   "name": "Polls",
-  "version": "1.0.0",
-  "description": "Create polls — dinner choices, weekend plans, movie night votes, and more.",
+  "version": "2.0.0",
+  "description": "Adults create simple family polls with fixed choices; each member may cast one final vote.",
   "entrypoint": "index.html",
   "runtime": "static",
   "category": "general",
-  "tags": [
-    "polls",
-    "voting",
-    "decisions",
-    "everyone"
-  ],
+  "tags": ["polls", "voting", "decisions", "everyone"],
   "data_access": {
-    "reads": [
-      "family.members"
-    ],
+    "reads": ["family.members"],
     "writes": []
   },
   "permissions": {
     "default_audience": "everyone",
     "requires_approval": false
   },
-  "storage": "kv",
-  "publishes": [
-    "poll.created",
-    "poll.closed"
-  ],
-  "alert_on": [
-    "poll.created",
-    "poll.closed"
-  ],
+  "storage": "db",
+  "row_policies": {
+    "polls": {
+      "kind": "adult_writable"
+    },
+    "votes": {
+      "kind": "owner_only",
+      "member_column": "member_id",
+      "adults_bypass": true,
+      "endpoint_writes_only": true
+    },
+    "vote_receipts": {
+      "kind": "owner_only",
+      "member_column": "member_id",
+      "adults_bypass": false,
+      "member_can_update": false,
+      "endpoint_writes_only": true
+    }
+  },
+  "anonymous_responses": {
+    "receipt_table": "vote_receipts",
+    "session_column": "poll_id",
+    "member_column": "member_id",
+    "created_at_column": "created_at",
+    "response_table": "votes",
+    "response_session_column": "poll_id",
+    "response_member_column": "member_id",
+    "response_answer_column": "option_id",
+    "response_id_column": "id",
+    "response_created_at_column": "created_at",
+    "session_table": "polls",
+    "session_id_column": "id",
+    "session_status_column": "status",
+    "session_open_value": "open"
+  },
+  "publishes": ["poll.created"],
+  "publish_acls": {
+    "poll.created": { "require_role": "adult" }
+  },
+  "alert_on": ["poll.created"],
   "nav": { "label": "Polls" },
   "widget": {
     "label": "Polls",
     "size": "small"
   },
   "resource_limits": {
-    "max_store_bytes": 524288,
-    "max_store_reads_per_day": 500,
-    "max_store_writes_per_day": 300
+    "max_db_bytes": 52428800
   },
   "icon": "🗳️"
 }
