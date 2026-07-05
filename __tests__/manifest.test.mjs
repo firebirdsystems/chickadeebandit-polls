@@ -11,7 +11,7 @@ const migration = readFileSync(join(root, "migrations/001_init.sql"), "utf8");
 describe("manifest", () => {
   it("declares the DB app basics", () => {
     expect(manifest.id).toBe("family-polls");
-    expect(manifest.version).toMatch(/^2\.\d+\.\d+$/);
+    expect(manifest.version).toMatch(/^1\.\d+\.\d+$/);
     expect(manifest.storage).toBe("db");
     expect(manifest.data_access.reads).toEqual(["family.members"]);
   });
