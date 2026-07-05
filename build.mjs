@@ -59,7 +59,13 @@ if (manifest.storage === "db") {
   console.log(`Migrations: ${migrations.length} file(s) validated ✓`);
 }
 
-const bundle = { manifest, ...(migrations.length ? { migrations } : {}), files };
+// ── Read scenarios.json (optional per-app behavioral specs) ───────────────────
+let scenarios;
+const SCENARIOS_FILE = path.join(ROOT, "scenarios.json");
+if (fs.existsSync(SCENARIOS_FILE)) {
+  scenarios = JSON.parse(fs.readFileSync(SCENARIOS_FILE, "utf8"));
+}
+const bundle = { manifest, ...(migrations.length ? { migrations } : {}), files, ...(scenarios ? { scenarios } : {}) };
 fs.mkdirSync(DIST, { recursive: true });
 fs.writeFileSync(path.join(DIST, "bundle.json"), JSON.stringify(bundle, null, 2), "utf8");
 const totalBytes = Object.values(files).reduce((sum, value) => sum + value.length, 0);
