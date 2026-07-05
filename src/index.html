@@ -198,7 +198,7 @@
         return;
       }
       const [pollResult, voteResult] = await Promise.all([
-        db("SELECT * FROM app_family_polls__polls WHERE status = 'open' ORDER BY created_at DESC"),
+        db("SELECT * FROM app_family_polls__polls ORDER BY created_at DESC"),
         db("SELECT poll_id, member_id, option_id, created_at FROM app_family_polls__votes ORDER BY created_at"),
       ]);
       polls = pollResult.rows ?? [];
@@ -225,54 +225,70 @@
       bindActions();
     }
 
+    function pollCard(poll, index) {
+      const closed = poll.status === "closed";
+      const mine = selectedOptionId(votesFor(poll.id), me?.id);
+      const badge = closed
+        ? '<span class="badge">Closed</span>'
+        : mine ? '<span class="badge badge-voted">Voted ✓</span>' : '<span class="badge">Open</span>';
+      return `
+        <article class="card poll-card" data-open-poll="${index}">
+          <div class="row">
+            <div>
+              <h2>${esc(poll.question)}</h2>
+              <div class="muted">Created by ${esc(creatorName(poll))} · ${pollOptions(poll).length} choices</div>
+            </div>
+            ${badge}
+          </div>
+        </article>`;
+    }
+
     function listHtml() {
-      const cards = polls.length
-        ? polls.map((poll, index) => {
-            const mine = selectedOptionId(votesFor(poll.id), me?.id);
-            return `
-              <article class="card poll-card" data-open-poll="${index}">
-                <div class="row">
-                  <div>
-                    <h2>${esc(poll.question)}</h2>
-                    <div class="muted">Created by ${esc(creatorName(poll))} · ${pollOptions(poll).length} choices</div>
-                  </div>
-                  ${mine ? '<span class="badge badge-voted">Voted ✓</span>' : '<span class="badge">Open</span>'}
-                </div>
-              </article>`;
-          }).join("")
-        : '<div class="card empty">No open polls yet.</div>';
+      const openCards = polls
+        .map((poll, index) => (poll.status === "closed" ? "" : pollCard(poll, index)))
+        .join("");
+      const closedCards = polls
+        .map((poll, index) => (poll.status === "closed" ? pollCard(poll, index) : ""))
+        .join("");
 
       return `
         <header class="header">
-          <div><h1>🗳️ Polls</h1><div class="muted">One final vote per member</div></div>
+          <div><h1>🗳️ Polls</h1><div class="muted">One final vote per member · results revealed when the poll closes</div></div>
           ${isAdult(me) ? '<button class="btn btn-primary" id="new-poll">+ New Poll</button>' : ""}
         </header>
         ${errorMessage ? `<div class="error">${esc(errorMessage)}</div>` : ""}
-        ${cards}`;
+        ${openCards || '<div class="card empty">No open polls yet.</div>'}
+        ${closedCards ? `<h2 style="margin:18px 0 10px">Closed polls</h2>${closedCards}` : ""}`;
     }
 
     function detailHtml(poll) {
       const options = pollOptions(poll);
       const pollVotes = votesFor(poll.id);
       const mine = selectedOptionId(pollVotes, me?.id);
+      const closed = poll.status === "closed";
       const counts = voteCounts(options, pollVotes);
       const winners = new Set(winningOptionIds(options, counts));
       const total = pollVotes.length;
-      const showTally = isAdult(me);
 
       const optionsHtml = options.map((option, index) => {
         const count = counts[option.id] ?? 0;
         const pct = total ? Math.round(count / total * 100) : 0;
         return `
-          <button class="option ${mine === option.id ? "selected" : ""} ${showTally && winners.has(option.id) ? "winner" : ""}"
-                  data-vote-option="${index}" ${mine || !me ? "disabled" : ""}>
+          <button class="option ${mine === option.id ? "selected" : ""} ${closed && winners.has(option.id) ? "winner" : ""}"
+                  data-vote-option="${index}" ${closed || mine || !me ? "disabled" : ""}>
             <span class="option-line">
               <span>${esc(option.text)}${mine === option.id ? " ✓" : ""}</span>
-              ${showTally ? `<strong>${count}</strong>` : ""}
+              ${closed ? `<strong>${count}</strong>` : ""}
             </span>
-            ${showTally ? `<span class="bar"><div style="width:${pct}%"></div></span>` : ""}
+            ${closed ? `<span class="bar"><div style="width:${pct}%"></div></span>` : ""}
           </button>`;
       }).join("");
+
+      const notice = closed
+        ? `<div class="notice">This poll is closed. ${total} vote${total === 1 ? "" : "s"} recorded.</div>`
+        : mine
+          ? '<div class="notice">Your vote is final. Votes stay sealed until the poll closes; results are revealed to everyone then.</div>'
+          : '<div class="notice">Choose one option. Your vote cannot be changed after submission.</div>';
 
       return `
         <button class="back" id="back">← All polls</button>
@@ -283,13 +299,12 @@
               <h1>${esc(poll.question)}</h1>
               <div class="muted">Created by ${esc(creatorName(poll))}</div>
             </div>
-            ${mine ? '<span class="badge badge-voted">Voted ✓</span>' : '<span class="badge">Open</span>'}
+            ${closed ? '<span class="badge">Closed</span>' : mine ? '<span class="badge badge-voted">Voted ✓</span>' : '<span class="badge">Open</span>'}
           </div>
           <div class="card-body">
-            ${mine
-              ? `<div class="notice">Your vote is final. ${showTally ? "The current tally is shown below." : "Full results are available to adults."}</div>`
-              : '<div class="notice">Choose one option. Your vote cannot be changed after submission.</div>'}
+            ${notice}
             ${optionsHtml}
+            ${!closed && isAdult(me) ? '<div class="actions"><button class="btn" id="close-poll">Close poll &amp; reveal results</button></div>' : ""}
           </div>
         </section>`;
     }
@@ -311,6 +326,23 @@
       document.querySelectorAll("[data-vote-option]").forEach(element => {
         element.addEventListener("click", () => submitVote(Number(element.dataset.voteOption)));
       });
+      document.getElementById("close-poll")?.addEventListener("click", closePoll);
+    }
+
+    async function closePoll() {
+      const poll = polls.find(item => item.id === selectedPollId);
+      if (!poll || poll.status === "closed" || !isAdult(me)) return;
+      const button = document.getElementById("close-poll");
+      if (button) button.disabled = true;
+      errorMessage = "";
+      try {
+        await db("UPDATE app_family_polls__polls SET status = 'closed' WHERE id = ?", [poll.id]);
+        // Reload so the now-unsealed votes are fetched for the results view.
+        await loadData();
+      } catch (error) {
+        errorMessage = error?.message ?? "Unable to close poll.";
+      }
+      render();
     }
 
     function openCreateModal() {

@@ -1,8 +1,8 @@
 {
   "id": "family-polls",
   "name": "Polls",
-  "version": "2.0.0",
-  "description": "Adults create simple family polls with fixed choices; each member may cast one final vote.",
+  "version": "1.0.0",
+  "description": "Adults create simple family polls with fixed choices; each member may cast one final vote. Votes stay sealed until an adult closes the poll, then results are revealed to everyone.",
   "entrypoint": "index.html",
   "runtime": "static",
   "category": "general",
@@ -18,12 +18,19 @@
   "storage": "db",
   "row_policies": {
     "polls": {
-      "kind": "adult_writable"
+      "kind": "adult_writable",
+      "frozen_when": {
+        "status_column": "status",
+        "locked_values": ["closed"]
+      }
     },
     "votes": {
-      "kind": "owner_only",
-      "member_column": "member_id",
-      "adults_bypass": true,
+      "kind": "sealed_until",
+      "fk_column": "poll_id",
+      "parent_table": "polls",
+      "writer_column": "member_id",
+      "parent_status_column": "status",
+      "visible_parent_status_values": ["closed"],
       "endpoint_writes_only": true
     },
     "vote_receipts": {

@@ -16,15 +16,21 @@ describe("manifest", () => {
     expect(manifest.data_access.reads).toEqual(["family.members"]);
   });
 
-  it("allows only adults to create or modify poll rows", () => {
-    expect(manifest.row_policies.polls).toEqual({ kind: "adult_writable" });
+  it("allows only adults to create or modify poll rows, frozen once closed", () => {
+    expect(manifest.row_policies.polls).toEqual({
+      kind: "adult_writable",
+      frozen_when: { status_column: "status", locked_values: ["closed"] },
+    });
   });
 
-  it("makes votes endpoint-only while retaining attributed reads", () => {
+  it("seals votes until the poll closes and keeps writes endpoint-only", () => {
     expect(manifest.row_policies.votes).toEqual({
-      kind: "owner_only",
-      member_column: "member_id",
-      adults_bypass: true,
+      kind: "sealed_until",
+      fk_column: "poll_id",
+      parent_table: "polls",
+      writer_column: "member_id",
+      parent_status_column: "status",
+      visible_parent_status_values: ["closed"],
       endpoint_writes_only: true,
     });
   });
