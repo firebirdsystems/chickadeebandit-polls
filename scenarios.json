@@ -1,0 +1,91 @@
+{
+  "scenarios": [
+    {
+      "name": "votes are sealed until the poll closes; each voter sees only their own vote",
+      "members": { "a": "adult", "b": "adult" },
+      "steps": [
+        {
+          "action": "seedRaw",
+          "sql": "INSERT INTO app_family_polls__polls (id, question, options_json, status, created_by, created_at) VALUES (?, ?, ?, 'open', ?, ?)",
+          "params": ["p1", "Where to vacation?", "[{\"id\":\"o1\",\"label\":\"Beach\"},{\"id\":\"o2\",\"label\":\"Mountains\"}]", "{{a}}", "2026-01-01T00:00:00Z"]
+        },
+        {
+          "action": "seedRaw",
+          "sql": "INSERT INTO app_family_polls__votes (id, poll_id, member_id, option_id, created_at) VALUES ('v1', 'p1', ?, 'o1', '2026-01-01T00:00:00Z'), ('v2', 'p1', ?, 'o2', '2026-01-01T00:00:00Z')",
+          "params": ["{{a}}", "{{b}}"]
+        },
+        {
+          "action": "db",
+          "as": "a",
+          "sql": "SELECT member_id, option_id FROM app_family_polls__votes WHERE poll_id = ?",
+          "params": ["p1"],
+          "expect": { "status": 200, "rowCount": 1 }
+        },
+        {
+          "action": "db",
+          "as": "a",
+          "sql": "SELECT option_id FROM app_family_polls__votes WHERE poll_id = ? AND member_id = ?",
+          "params": ["p1", "{{b}}"],
+          "expect": { "status": 200, "rowCount": 0 }
+        },
+        {
+          "action": "db",
+          "as": "a",
+          "sql": "INSERT INTO app_family_polls__votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, ?)",
+          "params": ["v3", "p1", "{{a}}", "o2", "2026-01-01T00:00:00Z"],
+          "expect": { "status": 403, "errorIncludes": "endpoint" }
+        },
+        {
+          "action": "seedRaw",
+          "sql": "UPDATE app_family_polls__polls SET status = 'closed' WHERE id = 'p1'"
+        },
+        {
+          "action": "db",
+          "as": "a",
+          "sql": "SELECT member_id, option_id FROM app_family_polls__votes WHERE poll_id = ?",
+          "params": ["p1"],
+          "expect": { "status": 200, "rowCount": 2 }
+        }
+      ]
+    },
+    {
+      "name": "closed polls are frozen: even adults cannot edit or reopen them",
+      "members": { "adult": "adult" },
+      "steps": [
+        {
+          "action": "seedRaw",
+          "sql": "INSERT INTO app_family_polls__polls (id, question, options_json, status, created_by, created_at) VALUES (?, ?, ?, 'closed', ?, ?)",
+          "params": ["p1", "Done poll", "[]", "{{adult}}", "2026-01-01T00:00:00Z"]
+        },
+        {
+          "action": "db",
+          "as": "adult",
+          "sql": "UPDATE app_family_polls__polls SET question = 'tampered' WHERE id = ?",
+          "params": ["p1"],
+          "expect": { "status": 200 }
+        },
+        {
+          "action": "db",
+          "as": "adult",
+          "sql": "SELECT question FROM app_family_polls__polls WHERE id = ?",
+          "params": ["p1"],
+          "expect": { "status": 200, "rowCount": 1, "rowsContain": [{ "question": "Done poll" }] }
+        },
+        {
+          "action": "db",
+          "as": "adult",
+          "sql": "DELETE FROM app_family_polls__polls WHERE id = ?",
+          "params": ["p1"],
+          "expect": { "status": 200 }
+        },
+        {
+          "action": "db",
+          "as": "adult",
+          "sql": "SELECT id FROM app_family_polls__polls WHERE id = ?",
+          "params": ["p1"],
+          "expect": { "status": 200, "rowCount": 1 }
+        }
+      ]
+    }
+  ]
+}
