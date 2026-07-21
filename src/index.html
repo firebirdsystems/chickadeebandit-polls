@@ -143,6 +143,14 @@
     const EVENTS = window.__EVENTS_URL ?? "/api/events";
     const APP_ID = window.__APP_ID ?? "family-polls";
     const HUB_MEMBER = window.__CURRENT_MEMBER ?? null;
+    const IS_ADMIN = window.__IS_ADMIN === true;
+    const IS_ROSTER = window.__SPACE_KIND === "roster";
+    // Who may create and close polls. In a roster (classroom / team / clients)
+    // only the steward — the space admin — authors polls; everyone else just
+    // votes. Elsewhere any adult may. The hub enforces this server-side
+    // (adult_writable + steward_writes_only on `polls`); this only hides
+    // controls that would 403.
+    const canSteward = (m) => IS_ROSTER ? IS_ADMIN : isAdult(m);
 
     let members = [];
     let memberMap = new Map();
@@ -254,7 +262,7 @@
       return `
         <header class="header">
           <div><h1>🗳️ Polls</h1><div class="muted">One final vote per member · results revealed when the poll closes</div></div>
-          ${isAdult(me) ? '<button class="btn btn-primary" id="new-poll">+ New Poll</button>' : ""}
+          ${canSteward(me) ? '<button class="btn btn-primary" id="new-poll">+ New Poll</button>' : ""}
         </header>
         ${errorMessage ? `<div class="error">${esc(errorMessage)}</div>` : ""}
         ${openCards || '<div class="card empty">No open polls yet.</div>'}
@@ -304,7 +312,7 @@
           <div class="card-body">
             ${notice}
             ${optionsHtml}
-            ${!closed && isAdult(me) ? '<div class="actions"><button class="btn" id="close-poll">Close poll &amp; reveal results</button></div>' : ""}
+            ${!closed && canSteward(me) ? '<div class="actions"><button class="btn" id="close-poll">Close poll &amp; reveal results</button></div>' : ""}
           </div>
         </section>`;
     }
@@ -331,7 +339,7 @@
 
     async function closePoll() {
       const poll = polls.find(item => item.id === selectedPollId);
-      if (!poll || poll.status === "closed" || !isAdult(me)) return;
+      if (!poll || poll.status === "closed" || !canSteward(me)) return;
       const button = document.getElementById("close-poll");
       if (button) button.disabled = true;
       errorMessage = "";
@@ -346,7 +354,7 @@
     }
 
     function openCreateModal() {
-      if (!isAdult(me)) return;
+      if (!canSteward(me)) return;
       closeModal();
       modal = document.createElement("div");
       modal.className = "modal-backdrop";

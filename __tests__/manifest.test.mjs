@@ -19,6 +19,8 @@ describe("manifest", () => {
   it("allows only adults to create or modify poll rows, frozen once closed", () => {
     expect(manifest.row_policies.polls).toEqual({
       kind: "adult_writable",
+      // In a roster space only the steward authors polls; a no-op elsewhere.
+      steward_writes_only: true,
       frozen_when: { status_column: "status", locked_values: ["closed"] },
     });
   });

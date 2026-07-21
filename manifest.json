@@ -15,10 +15,12 @@
     "default_audience": "everyone",
     "requires_approval": false
   },
+  "contexts": ["household", "shared_space.roster"],
   "storage": "db",
   "row_policies": {
     "polls": {
       "kind": "adult_writable",
+      "steward_writes_only": true,
       "frozen_when": {
         "status_column": "status",
         "locked_values": ["closed"]
