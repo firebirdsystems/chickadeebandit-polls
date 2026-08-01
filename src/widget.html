@@ -43,7 +43,7 @@
   <div id="root"><div class="empty">Loading…</div></div>
   <script type="module">
     import { esc } from "/hub-sdk.js";
-    import { parseOptions, selectedOptionId } from "./logic.js";
+    import { parseOptions } from "./logic.js";
 
     const DB = window.__DB_URL ?? "";
     const APP_ID = window.__APP_ID ?? "family-polls";
@@ -64,18 +64,18 @@
     async function load() {
       const [pollResult, voteResult] = await Promise.all([
         db("SELECT * FROM app_family_polls__polls WHERE status = 'open' ORDER BY created_at DESC LIMIT 5"),
-        db("SELECT poll_id, member_id, option_id FROM app_family_polls__votes"),
+        // Own receipts: an anonymous ballot records no member id, so "have I
+        // voted?" can only be answered by the receipt table (owner_only, so
+        // this returns just this member's rows). Bounded, like the main view.
+        db("SELECT poll_id FROM app_family_polls__vote_receipts LIMIT 200"),
       ]);
       render(pollResult.rows ?? [], voteResult.rows ?? []);
     }
 
-    function render(polls, votes) {
+    function render(polls, receipts) {
       const rows = polls.length
         ? polls.map(poll => {
-            const voted = Boolean(selectedOptionId(
-              votes.filter(vote => vote.poll_id === poll.id),
-              ME?.id,
-            ));
+            const voted = Boolean(ME) && receipts.some(receipt => receipt.poll_id === poll.id);
             const href = `/run/${APP_ID}?pollId=${encodeURIComponent(poll.id)}`;
             return `
               <a class="row" href="${href}">

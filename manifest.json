@@ -2,7 +2,7 @@
   "id": "family-polls",
   "name": "Polls",
   "version": "1.0.0",
-  "description": "Adults create simple family polls with fixed choices; each member may cast one final vote. Votes stay sealed until an adult closes the poll, then results are revealed to everyone.",
+  "description": "Adults create simple family polls with fixed choices; each member may cast one final vote. Votes stay hidden until an adult closes the poll. Attributed polls then show who voted for what; anonymous polls record no voter at all.",
   "entrypoint": "index.html",
   "runtime": "static",
   "category": "general",
@@ -24,7 +24,25 @@
       "frozen_when": {
         "status_column": "status",
         "locked_values": ["closed"]
+      },
+      "retain_days": {
+        "default": 730,
+        "timestamp_column": "created_at",
+        "dependent_tables": [
+          { "table": "poll_votes", "foreign_key": "poll_id" },
+          { "table": "votes", "foreign_key": "poll_id" },
+          { "table": "vote_receipts", "foreign_key": "poll_id" }
+        ]
       }
+    },
+    "poll_votes": {
+      "kind": "sealed_until",
+      "fk_column": "poll_id",
+      "parent_table": "polls",
+      "writer_column": "member_id",
+      "parent_status_column": "status",
+      "visible_parent_status_values": ["closed"],
+      "endpoint_writes_only": true
     },
     "votes": {
       "kind": "sealed_until",
@@ -48,7 +66,7 @@
     "session_column": "poll_id",
     "member_column": "member_id",
     "created_at_column": "created_at",
-    "response_table": "votes",
+    "response_table": "poll_votes",
     "response_session_column": "poll_id",
     "response_member_column": "member_id",
     "response_answer_column": "option_id",
@@ -57,7 +75,15 @@
     "session_table": "polls",
     "session_id_column": "id",
     "session_status_column": "status",
-    "session_open_value": "open"
+    "session_open_value": "open",
+    "session_anonymous_column": "anonymous",
+    "result_visible_values": ["closed"]
+  },
+  "member_references": {
+    "polls": { "column": "created_by", "on_removed": "keep" },
+    "poll_votes": { "column": "member_id", "on_removed": "null" },
+    "votes": { "column": "member_id", "on_removed": "delete" },
+    "vote_receipts": { "column": "member_id", "on_removed": "delete", "id_column": "rowid" }
   },
   "publishes": ["poll.created"],
   "publish_acls": {

@@ -134,8 +134,8 @@
   <main class="app" id="app"><div class="empty">Loading polls…</div></main>
 
   <script type="module">
-    import { esc, isAdult } from "/hub-sdk.js";
-    import { parseOptions, selectedOptionId, voteCounts, winningOptionIds } from "./logic.js";
+    import { esc, isAdult, hubConfirm } from "/hub-sdk.js";
+    import { parseOptions, selectedOptionId, voteCounts, winningOptionIds, spoiledVotes, countedVotes } from "./logic.js";
 
     const DB = window.__DB_URL ?? "";
     const CONTEXT = window.__CONTEXT_URL ?? "";
@@ -157,7 +157,12 @@
     let me = HUB_MEMBER;
     let polls = [];
     let votes = [];
+    let myReceipts = new Set();
     let selectedPollId = null;
+
+    /** Read bounds — see loadData. */
+    const POLL_LIMIT = 200;
+    const VOTE_LIMIT = 2000;
     let modal = null;
     let errorMessage = "";
 
@@ -205,12 +210,20 @@
         me = members[0];
         return;
       }
-      const [pollResult, voteResult] = await Promise.all([
-        db("SELECT * FROM app_family_polls__polls ORDER BY created_at DESC"),
-        db("SELECT poll_id, member_id, option_id, created_at FROM app_family_polls__votes ORDER BY created_at"),
+      // Bounded. Both reads were unbounded: a household that has been polling
+      // for years pulled every poll and every ballot ever cast on each page
+      // load, and the votes query grows with polls × members.
+      const [pollResult, voteResult, receiptResult] = await Promise.all([
+        db(`SELECT * FROM app_family_polls__polls ORDER BY created_at DESC LIMIT ${POLL_LIMIT}`),
+        db(`SELECT poll_id, member_id, option_id, created_at FROM app_family_polls__poll_votes ORDER BY created_at LIMIT ${VOTE_LIMIT}`),
+        // Own receipts only (the policy is owner_only, adults_bypass:false).
+        // This is how "have I voted?" is answered on an anonymous poll, where
+        // the ballot carries no member id to recognise.
+        db(`SELECT poll_id FROM app_family_polls__vote_receipts LIMIT ${POLL_LIMIT}`),
       ]);
       polls = pollResult.rows ?? [];
       votes = voteResult.rows ?? [];
+      myReceipts = new Set((receiptResult.rows ?? []).map(row => row.poll_id));
     }
 
     function pollOptions(poll) {
@@ -233,18 +246,30 @@
       bindActions();
     }
 
+    /** Whether this poll records no voter at all. */
+    function isAnonymous(poll) { return Number(poll?.anonymous) === 1; }
+
+    /**
+     * Whether this member has already voted. An anonymous ballot carries no
+     * member id, so scanning the votes cannot answer it — the receipt does,
+     * and it is the same row the hub uses to refuse a second vote.
+     */
+    function hasVoted(poll) {
+      if (!me) return false;
+      return myReceipts.has(poll.id) || selectedOptionId(votesFor(poll.id), me.id) !== null;
+    }
+
     function pollCard(poll, index) {
       const closed = poll.status === "closed";
-      const mine = selectedOptionId(votesFor(poll.id), me?.id);
       const badge = closed
         ? '<span class="badge">Closed</span>'
-        : mine ? '<span class="badge badge-voted">Voted ✓</span>' : '<span class="badge">Open</span>';
+        : hasVoted(poll) ? '<span class="badge badge-voted">Voted ✓</span>' : '<span class="badge">Open</span>';
       return `
         <article class="card poll-card" data-open-poll="${index}">
           <div class="row">
             <div>
               <h2>${esc(poll.question)}</h2>
-              <div class="muted">Created by ${esc(creatorName(poll))} · ${pollOptions(poll).length} choices</div>
+              <div class="muted">Created by ${esc(creatorName(poll))} · ${pollOptions(poll).length} choices${isAnonymous(poll) ? " · anonymous" : ""}</div>
             </div>
             ${badge}
           </div>
@@ -271,9 +296,17 @@
 
     function detailHtml(poll) {
       const options = pollOptions(poll);
-      const pollVotes = votesFor(poll.id);
-      const mine = selectedOptionId(pollVotes, me?.id);
+      const allVotes = votesFor(poll.id);
+      const anonymous = isAnonymous(poll);
+      // An anonymous poll shows no per-member selection, because there is none
+      // to show; `mine` stays null and the ✓ moves to the badge.
+      const mine = anonymous ? null : selectedOptionId(allVotes, me?.id);
+      const voted = hasVoted(poll);
       const closed = poll.status === "closed";
+      // Ballots naming an option that is not on this poll are excluded from
+      // both the counts and the total, so the percentages always add up.
+      const pollVotes = countedVotes(options, allVotes);
+      const spoiled = spoiledVotes(options, allVotes);
       const counts = voteCounts(options, pollVotes);
       const winners = new Set(winningOptionIds(options, counts));
       const total = pollVotes.length;
@@ -283,7 +316,7 @@
         const pct = total ? Math.round(count / total * 100) : 0;
         return `
           <button class="option ${mine === option.id ? "selected" : ""} ${closed && winners.has(option.id) ? "winner" : ""}"
-                  data-vote-option="${index}" ${closed || mine || !me ? "disabled" : ""}>
+                  data-vote-option="${index}" ${closed || voted || !me ? "disabled" : ""}>
             <span class="option-line">
               <span>${esc(option.text)}${mine === option.id ? " ✓" : ""}</span>
               ${closed ? `<strong>${count}</strong>` : ""}
@@ -292,11 +325,21 @@
           </button>`;
       }).join("");
 
-      const notice = closed
-        ? `<div class="notice">This poll is closed. ${total} vote${total === 1 ? "" : "s"} recorded.</div>`
-        : mine
-          ? '<div class="notice">Your vote is final. Votes stay sealed until the poll closes; results are revealed to everyone then.</div>'
-          : '<div class="notice">Choose one option. Your vote cannot be changed after submission.</div>';
+      // Copy that matches what actually happens. The app used to say votes
+      // "stay sealed", which members read as "nobody will know how I voted" —
+      // but an attributed poll unseals every ballot, voter and all, the moment
+      // it closes. Each mode now says what it does.
+      const privacyLine = anonymous
+        ? "This poll is anonymous — no record is kept of who voted for what."
+        : "When the poll closes, everyone can see how each member voted.";
+      const spoiledLine = closed && spoiled.length > 0
+        ? `<div class="notice">${spoiled.length} vote${spoiled.length === 1 ? "" : "s"} named a choice that isn't on this poll and ${spoiled.length === 1 ? "was" : "were"} not counted.</div>`
+        : "";
+      const notice = (closed
+        ? `<div class="notice">This poll is closed. ${total} vote${total === 1 ? "" : "s"} counted. ${anonymous ? "Votes were anonymous." : ""}</div>`
+        : voted
+          ? `<div class="notice">Your vote is final. Results are revealed when the poll closes. ${privacyLine}</div>`
+          : `<div class="notice">Choose one option. Your vote cannot be changed after submission. ${privacyLine}</div>`) + spoiledLine;
 
       return `
         <button class="back" id="back">← All polls</button>
@@ -307,7 +350,7 @@
               <h1>${esc(poll.question)}</h1>
               <div class="muted">Created by ${esc(creatorName(poll))}</div>
             </div>
-            ${closed ? '<span class="badge">Closed</span>' : mine ? '<span class="badge badge-voted">Voted ✓</span>' : '<span class="badge">Open</span>'}
+            ${closed ? '<span class="badge">Closed</span>' : voted ? '<span class="badge badge-voted">Voted ✓</span>' : '<span class="badge">Open</span>'}
           </div>
           <div class="card-body">
             ${notice}
@@ -340,6 +383,18 @@
     async function closePoll() {
       const poll = polls.find(item => item.id === selectedPollId);
       if (!poll || poll.status === "closed" || !canSteward(me)) return;
+      // Irreversible on two counts: `frozen_when` locks the poll at "closed" so
+      // it can never reopen, and closing is what unseals every ballot to the
+      // household. It was one unconfirmed click.
+      const confirmed = await hubConfirm({
+        message: `Close "${poll.question}"?`,
+        description: isAnonymous(poll)
+          ? "Voting ends and the results are revealed to everyone. No record of who voted is kept. This can't be undone."
+          : "Voting ends and every vote — including who cast it — is revealed to everyone in the household. This can't be undone.",
+        confirmLabel: "Close poll",
+        destructive: true,
+      });
+      if (!confirmed) return;
       const button = document.getElementById("close-poll");
       if (button) button.disabled = true;
       errorMessage = "";
@@ -369,6 +424,17 @@
               <div class="option-input"><input maxlength="160" placeholder="Choice 2"></div>
             </div>
             <button class="btn" id="add-choice" style="margin-top:8px">+ Add choice</button>
+          </div>
+          <div class="field">
+            <label style="display:flex;align-items:center;gap:8px;font-weight:500">
+              <input type="checkbox" id="poll-anonymous">
+              Anonymous poll
+            </label>
+            <div class="muted" style="margin-top:4px">
+              Anonymous: no record is kept of who voted for what — not even for adults.
+              Otherwise everyone sees how each member voted once the poll closes.
+              This can't be changed after the poll is created.
+            </div>
           </div>
           <div class="error" id="modal-error" hidden></div>
           <div class="actions">
@@ -423,13 +489,16 @@
       const id = crypto.randomUUID();
       const options = texts.map(text => ({ id: crypto.randomUUID(), text }));
       const createdAt = new Date().toISOString();
+      // Fixed at creation: the flag decides whether each ballot records a voter,
+      // so flipping it later could only ever mislead about ballots already cast.
+      const anonymous = modal.querySelector("#poll-anonymous").checked ? 1 : 0;
 
       try {
         await db(
           `INSERT INTO app_family_polls__polls
-             (id, question, options_json, status, created_by, created_at)
-           VALUES (?, ?, ?, 'open', ?, ?)`,
-          [id, question, JSON.stringify(options), me.id, createdAt],
+             (id, question, options_json, status, created_by, created_at, anonymous)
+           VALUES (?, ?, ?, 'open', ?, ?, ?)`,
+          [id, question, JSON.stringify(options), me.id, createdAt, anonymous],
         );
         polls.unshift({
           id,
@@ -438,6 +507,7 @@
           status: "open",
           created_by: me.id,
           created_at: createdAt,
+          anonymous,
         });
         closeModal();
         selectedPollId = id;
@@ -476,12 +546,19 @@
         });
         const body = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(body.error ?? `Vote failed (${response.status})`);
-        votes.push({
-          poll_id: poll.id,
-          member_id: me.id,
-          option_id: option.id,
-          created_at: new Date().toISOString(),
-        });
+        // The receipt is what "you have voted" is read from, and it is recorded
+        // for both modes. An anonymous ballot is deliberately NOT added to the
+        // local votes list — there is no member id on it to reflect, and
+        // pretending otherwise here would be the same lie the copy just fixed.
+        myReceipts.add(poll.id);
+        if (!isAnonymous(poll)) {
+          votes.push({
+            poll_id: poll.id,
+            member_id: me.id,
+            option_id: option.id,
+            created_at: new Date().toISOString(),
+          });
+        }
       } catch (error) {
         errorMessage = error?.message ?? "Unable to submit vote.";
       }

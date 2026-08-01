@@ -4,6 +4,8 @@ import {
   selectedOptionId,
   voteCounts,
   winningOptionIds,
+  spoiledVotes,
+  countedVotes,
 } from "../src/logic.js";
 import { esc, initial, memberColor, AVATAR_COLORS } from "../src/shared.js";
 
@@ -76,5 +78,43 @@ describe("shared presentation helpers", () => {
     expect(initial(" alice")).toBe("A");
     expect(AVATAR_COLORS).toContain(memberColor("m1"));
     expect(memberColor("m1")).toBe(memberColor("m1"));
+  });
+});
+
+// ── spoiledVotes / countedVotes ───────────────────────────────────────────────
+// The vote endpoint takes the answer as an opaque string, so a crafted request
+// can record an option that isn't on the poll — and `sealed_until` with
+// `endpoint_writes_only` gives the app no way to delete a vote afterwards. The
+// tally therefore has to exclude them, and the UI has to say they exist.
+describe("spoiled ballots", () => {
+  const options = [{ id: "a", text: "A" }, { id: "b", text: "B" }];
+  const votes = [
+    { option_id: "a", member_id: "m1" },
+    { option_id: "b", member_id: "m2" },
+    { option_id: "not-an-option", member_id: "m3" },
+  ];
+
+  it("separates ballots naming an option that isn't on the poll", () => {
+    expect(spoiledVotes(options, votes)).toEqual([{ option_id: "not-an-option", member_id: "m3" }]);
+    expect(countedVotes(options, votes)).toHaveLength(2);
+  });
+
+  it("keeps percentages honest — the total is the counted ballots, not all of them", () => {
+    const counted = countedVotes(options, votes);
+    const counts = voteCounts(options, counted);
+    expect(counts.a + counts.b).toBe(counted.length);
+  });
+
+  it("finds nothing to exclude in a clean poll", () => {
+    expect(spoiledVotes(options, votes.slice(0, 2))).toEqual([]);
+  });
+});
+
+describe("selectedOptionId with anonymous ballots", () => {
+  it("returns null when there is no member to match", () => {
+    // Anonymous ballots carry no member_id at all; "have I voted?" is answered
+    // by the receipt table instead.
+    expect(selectedOptionId([{ option_id: "a", member_id: null }], null)).toBeNull();
+    expect(selectedOptionId([{ option_id: "a", member_id: null }], "m1")).toBeNull();
   });
 });

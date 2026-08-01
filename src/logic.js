@@ -18,7 +18,34 @@ export function voteCounts(options, votes) {
   return counts;
 }
 
+/**
+ * Ballots whose option_id is not one of the poll's choices.
+ *
+ * The vote endpoint takes the answer as an opaque string, so a crafted request
+ * can record a choice that does not exist. Such a ballot is also permanent —
+ * `sealed_until` with `endpoint_writes_only` gives the app no way to delete a
+ * vote — so the only remedy is to stop it counting and say it is there.
+ * `voteCounts` already ignores unknown ids; this reports them so a poll's total
+ * cannot silently disagree with the sum of its options.
+ */
+export function spoiledVotes(options, votes) {
+  const valid = new Set(options.map(option => option.id));
+  return votes.filter(vote => !valid.has(vote.option_id));
+}
+
+/** Ballots that count toward the result. */
+export function countedVotes(options, votes) {
+  const valid = new Set(options.map(option => option.id));
+  return votes.filter(vote => valid.has(vote.option_id));
+}
+
+/**
+ * This member's choice, or null. Anonymous ballots carry no member id at all,
+ * so there is nothing to match — "have I voted?" is answered by the receipt
+ * table instead, never by scanning the votes.
+ */
 export function selectedOptionId(votes, memberId) {
+  if (!memberId) return null;
   return votes.find(vote => vote.member_id === memberId)?.option_id ?? null;
 }
 
