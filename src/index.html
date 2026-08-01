@@ -128,14 +128,21 @@
     .option-input { display: flex; gap: 8px; margin-top: 8px; }
     .option-input input { flex: 1; }
     .actions { justify-content: flex-end; margin-top: 18px; }
+    .search-row { margin-bottom: 12px; }
+    .search-input {
+      width: 100%; border: 1.5px solid var(--border-mid, var(--border, #d1d5db));
+      border-radius: 8px; padding: 9px 11px; font: inherit;
+      background: var(--surface, var(--card, #fff)); color: var(--text, inherit);
+    }
+    .search-input:focus { outline: none; border-color: var(--accent, #6366f1); }
   </style>
 </head>
 <body>
   <main class="app" id="app"><div class="empty">Loading polls…</div></main>
 
   <script type="module">
-    import { esc, isAdult, hubConfirm } from "/hub-sdk.js";
-    import { parseOptions, selectedOptionId, voteCounts, winningOptionIds, spoiledVotes, countedVotes } from "./logic.js";
+    import { esc, isAdult, hubConfirm, searchMatch } from "/hub-sdk.js";
+    import { parseOptions, selectedOptionId, voteCounts, winningOptionIds, spoiledVotes, countedVotes, searchableFields } from "./logic.js";
 
     const DB = window.__DB_URL ?? "";
     const CONTEXT = window.__CONTEXT_URL ?? "";
@@ -156,6 +163,7 @@
     let memberMap = new Map();
     let me = HUB_MEMBER;
     let polls = [];
+let searchQ = "";       // in-app search (see logic.js searchableFields)
     let votes = [];
     let myReceipts = new Set();
     let selectedPollId = null;
@@ -238,6 +246,16 @@
       return memberMap.get(poll.created_by)?.name ?? "Adult";
     }
 
+    // render() rewrites the whole view, so put the caret back after typing.
+    document.addEventListener("input", (e) => {
+      if (e.target.id !== "search") return;
+      searchQ = e.target.value;
+      const caret = e.target.selectionStart;
+      render();
+      const next = document.getElementById("search");
+      if (next) { next.focus(); next.setSelectionRange(caret, caret); }
+    });
+
     function render() {
       errorMessage = errorMessage || "";
       const app = document.getElementById("app");
@@ -277,11 +295,15 @@
     }
 
     function listHtml() {
+      // pollCard takes the index into `polls`, so filter on a matching test
+      // rather than on a reindexed copy.
+      const shows = (poll) => !searchQ || searchMatch(
+        searchQ, searchableFields(poll, parseOptions(poll).map(o => o.label).join(" ")));
       const openCards = polls
-        .map((poll, index) => (poll.status === "closed" ? "" : pollCard(poll, index)))
+        .map((poll, index) => (poll.status === "closed" || !shows(poll) ? "" : pollCard(poll, index)))
         .join("");
       const closedCards = polls
-        .map((poll, index) => (poll.status === "closed" ? pollCard(poll, index) : ""))
+        .map((poll, index) => (poll.status === "closed" && shows(poll) ? pollCard(poll, index) : ""))
         .join("");
 
       return `
@@ -290,7 +312,8 @@
           ${canSteward(me) ? '<button class="btn btn-primary" id="new-poll">+ New Poll</button>' : ""}
         </header>
         ${errorMessage ? `<div class="error">${esc(errorMessage)}</div>` : ""}
-        ${openCards || '<div class="card empty">No open polls yet.</div>'}
+        ${polls.length ? `<div class="search-row"><input id="search" class="search-input" type="search" placeholder="Search polls…" aria-label="Search polls" value="${esc(searchQ)}" /></div>` : ""}
+        ${openCards || (searchQ ? `<div class="card empty">No open polls match "${esc(searchQ)}".</div>` : '<div class="card empty">No open polls yet.</div>')}
         ${closedCards ? `<h2 style="margin:18px 0 10px">Closed polls</h2>${closedCards}` : ""}`;
     }
 

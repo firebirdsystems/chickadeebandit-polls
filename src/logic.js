@@ -54,3 +54,13 @@ export function winningOptionIds(options, counts) {
   if (highest === 0) return [];
   return options.filter(option => counts[option.id] === highest).map(option => option.id);
 }
+
+/**
+ * Fields the in-app search matches against (see hub-sdk `searchMatch`).
+ * The options carry as much meaning as the question ("Friday or
+ * Saturday"), so they are flattened in alongside it. The column stores
+ * JSON, so the caller passes the option labels in as text.
+ */
+export function searchableFields(poll, optionText = "") {
+  return [poll.question, optionText];
+}

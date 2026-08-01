@@ -5,7 +5,7 @@ import {
   voteCounts,
   winningOptionIds,
   spoiledVotes,
-  countedVotes,
+  countedVotes, searchableFields,
 } from "../src/logic.js";
 import { esc, initial, memberColor, AVATAR_COLORS } from "../src/shared.js";
 
@@ -116,5 +116,13 @@ describe("selectedOptionId with anonymous ballots", () => {
     // by the receipt table instead.
     expect(selectedOptionId([{ option_id: "a", member_id: null }], null)).toBeNull();
     expect(selectedOptionId([{ option_id: "a", member_id: null }], "m1")).toBeNull();
+  });
+});
+
+describe("searchableFields", () => {
+  it("matches on the option labels as well as the question", () => {
+    const fields = searchableFields({ question: "When shall we meet?" }, "Friday Saturday");
+    expect(fields).toContain("When shall we meet?");
+    expect(fields).toContain("Friday Saturday");
   });
 });
