@@ -6,6 +6,7 @@ import {
   winningOptionIds,
   spoiledVotes,
   countedVotes, searchableFields,
+  turnoutLabel,
 } from "../src/logic.js";
 import { esc, initial, memberColor, AVATAR_COLORS } from "../src/shared.js";
 
@@ -116,6 +117,29 @@ describe("selectedOptionId with anonymous ballots", () => {
     // by the receipt table instead.
     expect(selectedOptionId([{ option_id: "a", member_id: null }], null)).toBeNull();
     expect(selectedOptionId([{ option_id: "a", member_id: null }], "m1")).toBeNull();
+  });
+});
+
+describe("turnout while a poll is still sealed", () => {
+  it("reads as a count of voters, singular and plural", () => {
+    expect(turnoutLabel(1)).toBe("1 vote so far");
+    expect(turnoutLabel(3)).toBe("3 votes so far");
+  });
+
+  it("says nobody has voted only when the hub actually said zero", () => {
+    expect(turnoutLabel(0)).toBe("0 votes so far");
+  });
+
+  it("renders nothing for an unknown count", () => {
+    // A poll missing from the turnout map — never fetched, or the request
+    // failed — must show no turnout at all. "0 votes so far" would assert
+    // something the app does not know, and on an open poll that is the exact
+    // question the member is asking.
+    expect(turnoutLabel(undefined)).toBe("");
+    expect(turnoutLabel(null)).toBe("");
+    expect(turnoutLabel(Number.NaN)).toBe("");
+    expect(turnoutLabel("4")).toBe("");
+    expect(turnoutLabel(-1)).toBe("");
   });
 });
 

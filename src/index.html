@@ -142,11 +142,12 @@
 
   <script type="module">
     import { esc, isAdult, hubConfirm, searchMatch } from "/hub-sdk.js";
-    import { parseOptions, selectedOptionId, voteCounts, winningOptionIds, spoiledVotes, countedVotes, searchableFields } from "./logic.js";
+    import { parseOptions, selectedOptionId, voteCounts, winningOptionIds, spoiledVotes, countedVotes, searchableFields, turnoutLabel } from "./logic.js";
 
     const DB = window.__DB_URL ?? "";
     const CONTEXT = window.__CONTEXT_URL ?? "";
     const SUBMIT_RESPONSE = window.__SUBMIT_RESPONSE_URL ?? "";
+    const RESPONSE_PROGRESS = window.__RESPONSE_PROGRESS_URL ?? "";
     const EVENTS = window.__EVENTS_URL ?? "/api/events";
     const APP_ID = window.__APP_ID ?? "family-polls";
     const HUB_MEMBER = window.__CURRENT_MEMBER ?? null;
@@ -166,11 +167,16 @@
 let searchQ = "";       // in-app search (see logic.js searchableFields)
     let votes = [];
     let myReceipts = new Set();
+    let turnout = new Map();   // poll id -> voters so far; absent means unknown
     let selectedPollId = null;
 
     /** Read bounds — see loadData. */
     const POLL_LIMIT = 200;
     const VOTE_LIMIT = 2000;
+    // Turnout costs one request per poll, so the list preloads only the newest
+    // open polls. Anything past the cap is fetched when that poll is opened,
+    // and renders no turnout until then — never a placeholder zero.
+    const TURNOUT_PRELOAD = 25;
     let modal = null;
     let errorMessage = "";
 
@@ -232,6 +238,44 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
       polls = pollResult.rows ?? [];
       votes = voteResult.rows ?? [];
       myReceipts = new Set((receiptResult.rows ?? []).map(row => row.poll_id));
+      await loadTurnout();
+    }
+
+    /**
+     * Voters so far on one open poll, from the hub's response-progress
+     * endpoint. See `turnoutLabel` in logic.js for why the count cannot come
+     * from a query here, and why an unknown count must stay unknown — every
+     * failure path below leaves the poll out of the map rather than at 0.
+     */
+    async function fetchTurnout(pollId) {
+      if (!RESPONSE_PROGRESS) return;
+      try {
+        const response = await fetch(`${RESPONSE_PROGRESS}?session_id=${encodeURIComponent(pollId)}`);
+        if (!response.ok) return;
+        const body = await response.json();
+        const responded = Number(body.responded);
+        if (Number.isFinite(responded)) turnout.set(pollId, responded);
+        // The receipts read is capped at POLL_LIMIT rows and this is not: for
+        // the poll in hand it is the authoritative answer to "have I voted?".
+        if (body.you_responded) myReceipts.add(pollId);
+      } catch { /* leave this poll's count unknown rather than wrong */ }
+    }
+
+    async function loadTurnout() {
+      turnout = new Map();
+      // Closed polls are excluded on purpose: their ballots are unsealed, so
+      // the results view counts them directly and a second number could
+      // disagree with it (spoiled ballots hold a receipt but are not counted).
+      const open = polls.filter(poll => poll.status !== "closed").slice(0, TURNOUT_PRELOAD);
+      await Promise.all(open.map(poll => fetchTurnout(poll.id)));
+    }
+
+    /** Turnout for a poll opened past the preload cap; repaints if it lands. */
+    async function ensureTurnout(pollId) {
+      const poll = polls.find(item => item.id === pollId);
+      if (!poll || poll.status === "closed" || turnout.has(pollId)) return;
+      await fetchTurnout(pollId);
+      if (selectedPollId === pollId) render();
     }
 
     function pollOptions(poll) {
@@ -277,8 +321,20 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
       return myReceipts.has(poll.id) || selectedOptionId(votesFor(poll.id), me.id) !== null;
     }
 
+    /**
+     * "3 votes so far", or "" when this poll's count is unknown or it is
+     * closed. Shown on anonymous polls too — that is the case where a member
+     * is most in the dark about whether anyone else has voted, and the count
+     * names nobody.
+     */
+    function turnoutText(poll) {
+      if (poll.status === "closed") return "";
+      return turnout.has(poll.id) ? turnoutLabel(turnout.get(poll.id)) : "";
+    }
+
     function pollCard(poll, index) {
       const closed = poll.status === "closed";
+      const turnoutSuffix = turnoutText(poll) ? ` · ${turnoutText(poll)}` : "";
       const badge = closed
         ? '<span class="badge">Closed</span>'
         : hasVoted(poll) ? '<span class="badge badge-voted">Voted ✓</span>' : '<span class="badge">Open</span>';
@@ -287,7 +343,7 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
           <div class="row">
             <div>
               <h2>${esc(poll.question)}</h2>
-              <div class="muted">Created by ${esc(creatorName(poll))} · ${pollOptions(poll).length} choices${isAnonymous(poll) ? " · anonymous" : ""}</div>
+              <div class="muted">Created by ${esc(creatorName(poll))} · ${pollOptions(poll).length} choices${isAnonymous(poll) ? " · anonymous" : ""}${turnoutSuffix}</div>
             </div>
             ${badge}
           </div>
@@ -358,11 +414,15 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
       const spoiledLine = closed && spoiled.length > 0
         ? `<div class="notice">${spoiled.length} vote${spoiled.length === 1 ? "" : "s"} named a choice that isn't on this poll and ${spoiled.length === 1 ? "was" : "were"} not counted.</div>`
         : "";
+      // Turnout leads the notice on an open poll: "am I the only one who has
+      // voted?" is the question the sealed view otherwise leaves unanswered.
+      // It is a count of voters, never of choices, so it reveals no result.
+      const turnoutSentence = turnoutText(poll) ? `${turnoutText(poll)}. ` : "";
       const notice = (closed
         ? `<div class="notice">This poll is closed. ${total} vote${total === 1 ? "" : "s"} counted. ${anonymous ? "Votes were anonymous." : ""}</div>`
         : voted
-          ? `<div class="notice">Your vote is final. Results are revealed when the poll closes. ${privacyLine}</div>`
-          : `<div class="notice">Choose one option. Your vote cannot be changed after submission. ${privacyLine}</div>`) + spoiledLine;
+          ? `<div class="notice">${turnoutSentence}Your vote is final. Results are revealed when the poll closes. ${privacyLine}</div>`
+          : `<div class="notice">${turnoutSentence}Choose one option. Your vote cannot be changed after submission. ${privacyLine}</div>`) + spoiledLine;
 
       return `
         <button class="back" id="back">← All polls</button>
@@ -395,6 +455,7 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
           selectedPollId = polls[Number(element.dataset.openPoll)]?.id ?? null;
           errorMessage = "";
           render();
+          if (selectedPollId) ensureTurnout(selectedPollId);
         });
       });
       document.querySelectorAll("[data-vote-option]").forEach(element => {
@@ -574,6 +635,12 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
         // local votes list — there is no member id on it to reflect, and
         // pretending otherwise here would be the same lie the copy just fixed.
         myReceipts.add(poll.id);
+        // Count this ballot immediately so the turnout line agrees with the
+        // "Voted ✓" badge, then reconcile with the hub — which also picks up
+        // anyone who voted while this poll was on screen. A failed refetch
+        // leaves the local increment standing rather than reverting it.
+        if (turnout.has(poll.id)) turnout.set(poll.id, turnout.get(poll.id) + 1);
+        await fetchTurnout(poll.id);
         if (!isAnonymous(poll)) {
           votes.push({
             poll_id: poll.id,
@@ -596,6 +663,7 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
         if (deepLink && polls.some(poll => poll.id === deepLink)) {
           selectedPollId = deepLink;
           render();
+          await ensureTurnout(deepLink);
         }
       } catch (error) {
         errorMessage = error?.message ?? "Unable to load polls.";

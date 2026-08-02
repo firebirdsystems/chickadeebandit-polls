@@ -49,6 +49,24 @@ export function selectedOptionId(votes, memberId) {
   return votes.find(vote => vote.member_id === memberId)?.option_id ?? null;
 }
 
+/**
+ * "3 votes so far" for an open poll, or "" when the count is unknown.
+ *
+ * Turnout cannot be counted from the app's own reads: `vote_receipts` is
+ * `owner_only` with `adults_bypass: false`, so a member sees exactly one row —
+ * their own — and `poll_votes` stays sealed until the poll closes. The hub
+ * counts the receipts and returns the aggregate alone, never the rows, which is
+ * what makes this safe on an anonymous poll: the list of who has voted is a
+ * step towards who voted for what, and this never exposes it.
+ *
+ * An unknown count renders nothing at all. A failed or not-yet-made read is not
+ * evidence that nobody has voted, and "0 votes so far" would say it is.
+ */
+export function turnoutLabel(count) {
+  if (typeof count !== "number" || !Number.isFinite(count) || count < 0) return "";
+  return `${count} vote${count === 1 ? "" : "s"} so far`;
+}
+
 export function winningOptionIds(options, counts) {
   const highest = Math.max(0, ...options.map(option => counts[option.id] ?? 0));
   if (highest === 0) return [];

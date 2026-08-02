@@ -17,6 +17,18 @@
   },
   "contexts": ["household", "shared_space", "shared_space.roster"],
   "storage": "db",
+  "glance": {
+    "source": {
+      "kind": "sql",
+      "query": "SELECT COUNT(*) AS n FROM app_family_polls__polls WHERE status = 'open' LIMIT 1"
+    },
+    "display": {
+      "template": "badge",
+      "count": "n",
+      "label": "polls open",
+      "severity": "info"
+    }
+  },
   "row_policies": {
     "polls": {
       "kind": "adult_writable",
