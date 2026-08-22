@@ -67,6 +67,39 @@ export function turnoutLabel(count) {
   return `${count} vote${count === 1 ? "" : "s"} so far`;
 }
 
+/**
+ * Choices that have no row in `poll_options` yet.
+ *
+ * The public form's choices are drawn from that table (manifest
+ * `submit.fields[].values_from`), but a poll's choices are authored into the
+ * `options_json` blob, and a migration cannot copy them across — it runs
+ * outside the encryption codec, so the blob reads as ciphertext there. The app
+ * therefore projects them itself, just before a poll is shared, and this says
+ * what is still missing. Keyed on the option's own id, so it is idempotent: a
+ * poll shared twice inserts nothing the second time, and every ballot already
+ * cast keeps naming the same choice.
+ *
+ * `position` is the choice's index in the blob, so the public form offers them
+ * in the order the author wrote them.
+ */
+export function missingOptionRows(options, existingIds) {
+  const have = existingIds instanceof Set ? existingIds : new Set(existingIds ?? []);
+  return options
+    .map((option, index) => ({ id: option.id, text: option.text, position: index }))
+    .filter(row => !have.has(row.id));
+}
+
+/**
+ * "3 from the shared link", or "" when none are. Guest ballots are counted in
+ * the result like any other, but they are not the same evidence: a link has no
+ * identity behind it and nothing stops one visitor voting twice. A household
+ * reading a result deserves to see how much of it arrived that way.
+ */
+export function guestVoteLabel(count) {
+  if (typeof count !== "number" || !Number.isFinite(count) || count <= 0) return "";
+  return `${count} from the shared link`;
+}
+
 export function winningOptionIds(options, counts) {
   const highest = Math.max(0, ...options.map(option => counts[option.id] ?? 0));
   if (highest === 0) return [];

@@ -1,8 +1,8 @@
 {
   "id": "family-polls",
   "name": "Polls",
-  "version": "1.0.0",
-  "description": "Adults create simple family polls with fixed choices; each member may cast one final vote. Votes stay hidden until an adult closes the poll. Attributed polls then show who voted for what; anonymous polls record no voter at all.",
+  "version": "1.1.0",
+  "description": "Adults create simple family polls with fixed choices; each member may cast one final vote. Votes stay hidden until an adult closes the poll. Attributed polls then show who voted for what; anonymous polls record no voter at all. A poll can also be shared by link so people outside the household can vote without an account.",
   "entrypoint": "index.html",
   "runtime": "static",
   "category": "general",
@@ -17,6 +17,7 @@
   },
   "contexts": ["household", "shared_space", "shared_space.roster"],
   "storage": "db",
+  "db_plaintext_columns": ["source"],
   "glance": {
     "source": {
       "kind": "sql",
@@ -43,7 +44,9 @@
         "dependent_tables": [
           { "table": "poll_votes", "foreign_key": "poll_id" },
           { "table": "votes", "foreign_key": "poll_id" },
-          { "table": "vote_receipts", "foreign_key": "poll_id" }
+          { "table": "vote_receipts", "foreign_key": "poll_id" },
+          { "table": "poll_options", "foreign_key": "poll_id" },
+          { "table": "guest_votes", "foreign_key": "poll_id" }
         ]
       }
     },
@@ -64,6 +67,20 @@
       "parent_status_column": "status",
       "visible_parent_status_values": ["closed"],
       "endpoint_writes_only": true
+    },
+    "poll_options": {
+      "kind": "adult_writable",
+      "steward_writes_only": true
+    },
+    "guest_votes": {
+      "kind": "sealed_until",
+      "fk_column": "poll_id",
+      "parent_table": "polls",
+      "writer_column": "member_id",
+      "parent_status_column": "status",
+      "visible_parent_status_values": ["closed"],
+      "endpoint_writes_only": true,
+      "max_rows": 5000
     },
     "vote_receipts": {
       "kind": "owner_only",
@@ -91,11 +108,44 @@
     "session_anonymous_column": "anonymous",
     "result_visible_values": ["closed"]
   },
+  "shareable": {
+    "poll": {
+      "table": "polls",
+      "title_column": "question",
+      "columns": [
+        { "column": "created_at", "label": "Opened", "format": "date" }
+      ],
+      "visible_where": { "column": "status", "values": ["open"] },
+      "submit": {
+        "table": "guest_votes",
+        "fk_column": "poll_id",
+        "fields": [
+          {
+            "column": "option_id",
+            "label": "Your choice",
+            "type": "select",
+            "required": true,
+            "values_from": {
+              "table": "poll_options",
+              "fk_column": "poll_id",
+              "label_column": "text",
+              "where": [{ "column": "status", "values": ["open"] }]
+            }
+          }
+        ],
+        "fixed_values": { "source": "external" },
+        "max_submissions": 100,
+        "event": "family-polls.guest_vote_cast"
+      }
+    }
+  },
+
   "member_references": {
     "polls": { "column": "created_by", "on_removed": "keep" },
     "poll_votes": { "column": "member_id", "on_removed": "null" },
     "votes": { "column": "member_id", "on_removed": "delete" },
-    "vote_receipts": { "column": "member_id", "on_removed": "delete", "id_column": "rowid" }
+    "vote_receipts": { "column": "member_id", "on_removed": "delete", "id_column": "rowid" },
+    "guest_votes": { "column": "member_id", "on_removed": "keep" }
   },
   "publishes": ["poll.created"],
   "publish_acls": {

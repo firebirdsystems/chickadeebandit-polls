@@ -49,6 +49,70 @@
       ]
     },
     {
+      "name": "ballots cast through a share link are sealed like member ballots, and no member can forge one",
+      "members": { "a": "adult" },
+      "steps": [
+        {
+          "action": "seedRaw",
+          "sql": "INSERT INTO app_family_polls__polls (id, question, options_json, status, created_by, created_at) VALUES ('p1', 'Which night?', '[]', 'open', ?, '2026-01-01T00:00:00Z')",
+          "params": ["{{a}}"]
+        },
+        {
+          "action": "seedRaw",
+          "sql": "INSERT INTO app_family_polls__guest_votes (id, poll_id, option_id, source, created_at) VALUES ('g1', 'p1', 'o1', 'external', '2026-01-01T00:00:00Z')"
+        },
+        {
+          "action": "db",
+          "as": "a",
+          "sql": "SELECT option_id FROM app_family_polls__guest_votes WHERE poll_id = ?",
+          "params": ["p1"],
+          "expect": { "status": 200, "rowCount": 0 }
+        },
+        {
+          "action": "db",
+          "as": "a",
+          "sql": "INSERT INTO app_family_polls__guest_votes (id, poll_id, option_id, source, created_at) VALUES ('g2', 'p1', 'o1', 'external', '2026-01-01T00:00:00Z')",
+          "expect": { "status": 403, "errorIncludes": "endpoint" }
+        },
+        {
+          "action": "seedRaw",
+          "sql": "UPDATE app_family_polls__polls SET status = 'closed' WHERE id = 'p1'"
+        },
+        {
+          "action": "db",
+          "as": "a",
+          "sql": "SELECT option_id FROM app_family_polls__guest_votes WHERE poll_id = ?",
+          "params": ["p1"],
+          "expect": { "status": 200, "rowCount": 1 }
+        }
+      ]
+    },
+    {
+      "name": "only adults project a poll's choices into the table the public form reads",
+      "members": { "a": "adult", "kid": "child" },
+      "steps": [
+        {
+          "action": "db",
+          "as": "kid",
+          "sql": "INSERT INTO app_family_polls__poll_options (id, poll_id, text, position, status) VALUES ('o1', 'p1', 'Friday', 0, 'open')",
+          "expect": { "status": 403 }
+        },
+        {
+          "action": "db",
+          "as": "a",
+          "sql": "INSERT INTO app_family_polls__poll_options (id, poll_id, text, position, status) VALUES ('o1', 'p1', 'Friday', 0, 'open')",
+          "expect": { "status": 200 }
+        },
+        {
+          "action": "db",
+          "as": "kid",
+          "sql": "SELECT id FROM app_family_polls__poll_options WHERE poll_id = ?",
+          "params": ["p1"],
+          "expect": { "status": 200, "rowCount": 1 }
+        }
+      ]
+    },
+    {
       "name": "closed polls are frozen: even adults cannot edit or reopen them",
       "members": { "adult": "adult" },
       "steps": [

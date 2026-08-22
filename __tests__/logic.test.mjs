@@ -7,6 +7,8 @@ import {
   spoiledVotes,
   countedVotes, searchableFields,
   turnoutLabel,
+  missingOptionRows,
+  guestVoteLabel,
 } from "../src/logic.js";
 import { esc, initial, memberColor, AVATAR_COLORS } from "../src/shared.js";
 
@@ -148,5 +150,63 @@ describe("searchableFields", () => {
     const fields = searchableFields({ question: "When shall we meet?" }, "Friday Saturday");
     expect(fields).toContain("When shall we meet?");
     expect(fields).toContain("Friday Saturday");
+  });
+});
+
+describe("projecting choices for the public form", () => {
+  it("returns every choice the options table does not have yet, in author order", () => {
+    expect(missingOptionRows(options, new Set())).toEqual([
+      { id: "pizza", text: "Pizza", position: 0 },
+      { id: "tacos", text: "Tacos", position: 1 },
+      { id: "pasta", text: "Pasta", position: 2 },
+    ]);
+  });
+
+  it("is idempotent — a poll shared twice inserts nothing the second time", () => {
+    // The ids come from the poll's own blob, so a re-run matches by identity
+    // rather than by text, and every ballot already cast keeps naming the same
+    // choice.
+    const all = new Set(["pizza", "tacos", "pasta"]);
+    expect(missingOptionRows(options, all)).toEqual([]);
+  });
+
+  it("fills in only the gap when a choice was added after the first share", () => {
+    expect(missingOptionRows(options, ["pizza", "pasta"]))
+      .toEqual([{ id: "tacos", text: "Tacos", position: 1 }]);
+  });
+});
+
+describe("guest ballots in the result", () => {
+  it("names how many votes came through the link", () => {
+    expect(guestVoteLabel(1)).toBe("1 from the shared link");
+    expect(guestVoteLabel(4)).toBe("4 from the shared link");
+  });
+
+  it("says nothing for a choice no visitor picked", () => {
+    // The line appears only where it carries information; a household reading a
+    // closed poll should not have "0 from the shared link" under every choice.
+    expect(guestVoteLabel(0)).toBe("");
+    expect(guestVoteLabel(undefined)).toBe("");
+    expect(guestVoteLabel(-2)).toBe("");
+  });
+});
+
+describe("counting member and guest ballots together", () => {
+  const memberVotes = [
+    { option_id: "pizza", member_id: "m1" },
+    { option_id: "tacos", member_id: "m2" },
+  ];
+  const linkVotes = [
+    { option_id: "tacos" },
+    { option_id: "tacos" },
+  ];
+
+  it("sums both sources into one tally and can still separate them", () => {
+    // This is what the results view does: one set of counts for the bars, a
+    // second over guests alone for the provenance line under them.
+    const counts = voteCounts(options, [...memberVotes, ...linkVotes]);
+    expect(counts).toEqual({ pizza: 1, tacos: 3, pasta: 0 });
+    expect(voteCounts(options, linkVotes)).toEqual({ pizza: 0, tacos: 2, pasta: 0 });
+    expect(winningOptionIds(options, counts)).toEqual(["tacos"]);
   });
 });

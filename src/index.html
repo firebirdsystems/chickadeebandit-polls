@@ -135,14 +135,21 @@
       background: var(--surface, var(--card, #fff)); color: var(--text, inherit);
     }
     .search-input:focus { outline: none; border-color: var(--accent, #6366f1); }
+    .option-guest { display: block; margin-top: 6px; text-align: left; }
+    .link-row {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 0; border-bottom: 1px solid var(--border);
+    }
+    .link-row input { width: 100%; border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; }
+    .tiny { font-size: .78rem; }
   </style>
 </head>
 <body>
   <main class="app" id="app"><div class="empty">Loading polls…</div></main>
 
   <script type="module">
-    import { esc, isAdult, hubConfirm, searchMatch } from "/hub-sdk.js";
-    import { parseOptions, selectedOptionId, voteCounts, winningOptionIds, spoiledVotes, countedVotes, searchableFields, turnoutLabel } from "./logic.js";
+    import { esc, isAdult, hubConfirm, hubAlert, createShareHelper, searchMatch } from "/hub-sdk.js";
+    import { parseOptions, selectedOptionId, voteCounts, winningOptionIds, spoiledVotes, countedVotes, searchableFields, turnoutLabel, missingOptionRows, guestVoteLabel } from "./logic.js";
 
     const DB = window.__DB_URL ?? "";
     const CONTEXT = window.__CONTEXT_URL ?? "";
@@ -166,6 +173,7 @@
     let polls = [];
 let searchQ = "";       // in-app search (see logic.js searchableFields)
     let votes = [];
+    let guestVotes = [];       // ballots cast through a share link; sealed like the rest
     let myReceipts = new Set();
     let turnout = new Map();   // poll id -> voters so far; absent means unknown
     let selectedPollId = null;
@@ -173,12 +181,24 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
     /** Read bounds — see loadData. */
     const POLL_LIMIT = 200;
     const VOTE_LIMIT = 2000;
+    // The guest-vote row policy caps this table at 5,000 rows. Loading that
+    // entire bounded table keeps every closed poll's result complete; a lower
+    // global limit would eventually omit newer ballots from the tally.
+    const GUEST_VOTE_LIMIT = 5000;
     // Turnout costs one request per poll, so the list preloads only the newest
     // open polls. Anything past the cap is fetched when that poll is opened,
     // and renders no turnout until then — never a placeholder zero.
     const TURNOUT_PRELOAD = 25;
     let modal = null;
     let errorMessage = "";
+
+    // Share links. `enabled` is false when the hub injected no share URLs
+    // (demo mode, or an older hub); guest voting on top of a link is premium,
+    // which `status().entitled` answers.
+    const share = createShareHelper(window.__SHARE_CREATE_URL, window.__SHARE_REVOKE_URL, window.__SHARE_LIST_URL);
+    let shareModal = null;
+    let shareLinks = [];
+    let shareEntitled = false;
 
     async function db(sql, params = []) {
       if (!DB) return { rows: [] };
@@ -227,16 +247,21 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
       // Bounded. Both reads were unbounded: a household that has been polling
       // for years pulled every poll and every ballot ever cast on each page
       // load, and the votes query grows with polls × members.
-      const [pollResult, voteResult, receiptResult] = await Promise.all([
+      const [pollResult, voteResult, receiptResult, guestResult] = await Promise.all([
         db(`SELECT * FROM app_family_polls__polls ORDER BY created_at DESC LIMIT ${POLL_LIMIT}`),
         db(`SELECT poll_id, member_id, option_id, created_at FROM app_family_polls__poll_votes ORDER BY created_at LIMIT ${VOTE_LIMIT}`),
         // Own receipts only (the policy is owner_only, adults_bypass:false).
         // This is how "have I voted?" is answered on an anonymous poll, where
         // the ballot carries no member id to recognise.
         db(`SELECT poll_id FROM app_family_polls__vote_receipts LIMIT ${POLL_LIMIT}`),
+        // Ballots from share links. Governed by the same seal as member
+        // ballots, so an open poll returns none of them — the query is not
+        // conditional on the poll being closed, the row policy is.
+        db(`SELECT poll_id, option_id FROM app_family_polls__guest_votes ORDER BY created_at LIMIT ${GUEST_VOTE_LIMIT}`),
       ]);
       polls = pollResult.rows ?? [];
       votes = voteResult.rows ?? [];
+      guestVotes = guestResult.rows ?? [];
       myReceipts = new Set((receiptResult.rows ?? []).map(row => row.poll_id));
       await loadTurnout();
     }
@@ -284,6 +309,10 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
 
     function votesFor(pollId) {
       return votes.filter(vote => vote.poll_id === pollId);
+    }
+
+    function guestVotesFor(pollId) {
+      return guestVotes.filter(vote => vote.poll_id === pollId);
     }
 
     function creatorName(poll) {
@@ -385,14 +414,20 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
       // Ballots naming an option that is not on this poll are excluded from
       // both the counts and the total, so the percentages always add up.
       const pollVotes = countedVotes(options, allVotes);
-      const spoiled = spoiledVotes(options, allVotes);
-      const counts = voteCounts(options, pollVotes);
+      const allGuestVotes = guestVotesFor(poll.id);
+      const guestBallots = countedVotes(options, allGuestVotes);
+      const spoiled = spoiledVotes(options, [...allVotes, ...allGuestVotes]);
+      // Guests count, and are also counted separately: the result is the sum,
+      // and every place it is shown says how much of it came through a link.
+      const guestCounts = voteCounts(options, guestBallots);
+      const counts = voteCounts(options, [...pollVotes, ...guestBallots]);
       const winners = new Set(winningOptionIds(options, counts));
-      const total = pollVotes.length;
+      const total = pollVotes.length + guestBallots.length;
 
       const optionsHtml = options.map((option, index) => {
         const count = counts[option.id] ?? 0;
         const pct = total ? Math.round(count / total * 100) : 0;
+        const fromLink = closed ? guestVoteLabel(guestCounts[option.id] ?? 0) : "";
         return `
           <button class="option ${mine === option.id ? "selected" : ""} ${closed && winners.has(option.id) ? "winner" : ""}"
                   data-vote-option="${index}" ${closed || voted || !me ? "disabled" : ""}>
@@ -401,6 +436,7 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
               ${closed ? `<strong>${count}</strong>` : ""}
             </span>
             ${closed ? `<span class="bar"><div style="width:${pct}%"></div></span>` : ""}
+            ${fromLink ? `<span class="muted option-guest">${esc(fromLink)}</span>` : ""}
           </button>`;
       }).join("");
 
@@ -418,8 +454,13 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
       // voted?" is the question the sealed view otherwise leaves unanswered.
       // It is a count of voters, never of choices, so it reveals no result.
       const turnoutSentence = turnoutText(poll) ? `${turnoutText(poll)}. ` : "";
+      // Provenance belongs in the headline number too, not only under the bars:
+      // a result that is mostly link traffic reads very differently.
+      const guestSentence = closed && guestBallots.length > 0
+        ? `${guestBallots.length} of them came from a shared link, where anyone with the link could vote. `
+        : "";
       const notice = (closed
-        ? `<div class="notice">This poll is closed. ${total} vote${total === 1 ? "" : "s"} counted. ${anonymous ? "Votes were anonymous." : ""}</div>`
+        ? `<div class="notice">This poll is closed. ${total} vote${total === 1 ? "" : "s"} counted. ${guestSentence}${anonymous ? "Votes were anonymous." : ""}</div>`
         : voted
           ? `<div class="notice">${turnoutSentence}Your vote is final. Results are revealed when the poll closes. ${privacyLine}</div>`
           : `<div class="notice">${turnoutSentence}Choose one option. Your vote cannot be changed after submission. ${privacyLine}</div>`) + spoiledLine;
@@ -438,7 +479,10 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
           <div class="card-body">
             ${notice}
             ${optionsHtml}
-            ${!closed && canSteward(me) ? '<div class="actions"><button class="btn" id="close-poll">Close poll &amp; reveal results</button></div>' : ""}
+            ${!closed && canSteward(me) ? `<div class="actions">
+              ${share.enabled ? '<button class="btn" id="share-poll">🔗 Share</button>' : ""}
+              <button class="btn" id="close-poll">Close poll &amp; reveal results</button>
+            </div>` : ""}
           </div>
         </section>`;
     }
@@ -462,6 +506,157 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
         element.addEventListener("click", () => submitVote(Number(element.dataset.voteOption)));
       });
       document.getElementById("close-poll")?.addEventListener("click", closePoll);
+      document.getElementById("share-poll")?.addEventListener("click", () => openShareModal(selectedPollId));
+    }
+
+    // --- Share links ---------------------------------------------------------
+
+    function closeShareModal() {
+      shareModal?.remove();
+      shareModal = null;
+    }
+
+    /**
+     * Project this poll's choices into `poll_options`, which is where the
+     * public form reads them from (manifest `submit.fields[].values_from`).
+     *
+     * The blob is still the authority — this only mirrors it, keyed on the
+     * option ids the blob already assigned, so it is safe to run every time the
+     * dialog opens and it brings polls created before share links existed along
+     * with it. Only a steward gets here, which is what the table's row policy
+     * allows anyway.
+     */
+    async function ensureOptionRows(poll) {
+      const options = pollOptions(poll);
+      if (!options.length) return;
+      const existing = await db(
+        "SELECT id FROM app_family_polls__poll_options WHERE poll_id = ?", [poll.id]);
+      const missing = missingOptionRows(options, new Set((existing.rows ?? []).map(row => row.id)));
+      if (!missing.length) return;
+      const values = missing.map(() => "(?, ?, ?, ?, 'open')").join(", ");
+      await db(
+        `INSERT INTO app_family_polls__poll_options (id, poll_id, text, position, status) VALUES ${values}`,
+        missing.flatMap(row => [row.id, poll.id, row.text, row.position]),
+      );
+    }
+
+    async function openShareModal(pollId) {
+      const poll = polls.find(item => item.id === pollId);
+      if (!poll || poll.status === "closed" || !canSteward(me)) return;
+      try {
+        await ensureOptionRows(poll);
+      } catch (error) {
+        hubAlert("Couldn't prepare this poll for sharing", { description: error?.message ?? "" });
+        return;
+      }
+      const status = await share.status();
+      shareLinks = status.links;
+      shareEntitled = status.entitled;
+      const active = shareLinks.filter(link =>
+        link.itemId === pollId && !link.revokedAt && new Date(link.expiresAt) > new Date());
+
+      const rows = active.map(link => `
+        <div class="link-row">
+          <div style="flex:1;min-width:0">
+            <input readonly value="${esc(link.url)}" onclick="this.select()" class="tiny" />
+            <div class="tiny muted" style="margin-top:3px">
+              Expires ${new Date(link.expiresAt).toLocaleDateString()} · ${link.viewCount} view${link.viewCount === 1 ? "" : "s"}${
+                link.writable ? ` · ${link.submissionCount} guest vote${link.submissionCount === 1 ? "" : "s"}` : " · read-only"}${
+                link.hasPassword ? " · 🔒 password" : ""}
+            </div>
+          </div>
+          <button class="btn" data-share-copy="${esc(link.id)}">Copy</button>
+          <button class="btn" data-share-revoke="${esc(link.id)}">Revoke</button>
+        </div>`).join("");
+
+      // Guest voting rides on the premium `sharing` capability. Without it a
+      // link is read-only — the question and nothing else — so say that rather
+      // than offering a checkbox the hub would refuse.
+      const premiumControls = shareEntitled ? `
+        <div class="field">
+          <label style="display:flex;align-items:center;gap:8px;font-weight:500">
+            <input type="checkbox" id="share-writable" checked>
+            Let people with the link vote
+          </label>
+          <input id="share-password" type="text" class="tiny" autocomplete="off"
+                 placeholder="Optional password (min 6 characters)" style="margin-top:8px">
+        </div>
+      ` : `<p class="tiny muted" style="margin-top:10px">
+             This link will show the question only. Collecting votes from outside the household is part of premium sharing.
+           </p>`;
+
+      closeShareModal();
+      shareModal = document.createElement("div");
+      shareModal.className = "modal-backdrop";
+      shareModal.innerHTML = `
+        <div class="modal">
+          <h2>Share "${esc(poll.question)}"</h2>
+          <p class="tiny muted" style="margin:6px 0 10px">
+            Visitors see the question and its choices — never who voted, never the running result.
+            A guest vote is anonymous and nothing stops one visitor voting twice, so treat a shared
+            poll as a straw poll. The link stops working the moment the poll is closed.
+          </p>
+          ${rows || `<p class="tiny muted" style="padding:8px 0">No active links yet.</p>`}
+          ${premiumControls}
+          <div class="row" style="margin-top:14px;gap:8px">
+            <select id="share-expiry" class="tiny" style="width:auto">
+              <option value="24">1 day</option>
+              <option value="168" selected>7 days</option>
+              <option value="720">30 days</option>
+              ${shareEntitled ? `<option value="8760">1 year</option>` : ""}
+            </select>
+            <button class="btn btn-primary" id="share-create">Create link</button>
+          </div>
+          <div class="actions"><button class="btn" id="share-close">Close</button></div>
+        </div>`;
+      document.body.appendChild(shareModal);
+      shareModal.addEventListener("click", event => { if (event.target === shareModal) closeShareModal(); });
+      shareModal.querySelector("#share-close").addEventListener("click", closeShareModal);
+      shareModal.querySelector("#share-create").addEventListener("click", () => createShare(pollId));
+      shareModal.querySelectorAll("[data-share-copy]").forEach(element => {
+        element.addEventListener("click", () => copyShare(element.dataset.shareCopy));
+      });
+      shareModal.querySelectorAll("[data-share-revoke]").forEach(element => {
+        element.addEventListener("click", () => revokeShare(element.dataset.shareRevoke, pollId));
+      });
+    }
+
+    async function createShare(pollId) {
+      const poll = polls.find(item => item.id === pollId);
+      const hours = Number(shareModal?.querySelector("#share-expiry")?.value) || undefined;
+      const writable = !!shareModal?.querySelector("#share-writable")?.checked;
+      const password = shareModal?.querySelector("#share-password")?.value?.trim() || undefined;
+      const button = shareModal?.querySelector("#share-create");
+      if (button) { button.disabled = true; button.textContent = "Creating…"; }
+      try {
+        const link = await share.create("poll", pollId, {
+          expiresInHours: hours, label: poll?.question, writable, password,
+        });
+        try { await navigator.clipboard.writeText(link.url); } catch { /* the row below shows it */ }
+        await openShareModal(pollId);
+      } catch (error) {
+        if (button) { button.disabled = false; button.textContent = "Create link"; }
+        hubAlert("Couldn't create share link", { description: error?.message ?? "" });
+      }
+    }
+
+    async function copyShare(id) {
+      const link = shareLinks.find(item => item.id === id);
+      if (!link) return;
+      try { await navigator.clipboard.writeText(link.url); }
+      catch { hubAlert("Couldn't copy — select the link text and copy it manually."); }
+    }
+
+    async function revokeShare(id, pollId) {
+      const confirmed = await hubConfirm({
+        message: "Revoke this share link?",
+        description: "Anyone using it loses access immediately. Votes already cast through it stay counted.",
+        confirmLabel: "Revoke",
+        destructive: true,
+      });
+      if (!confirmed) return;
+      try { await share.revoke(id); await openShareModal(pollId); }
+      catch (error) { hubAlert("Couldn't revoke share link", { description: error?.message ?? "" }); }
     }
 
     async function closePoll() {
@@ -472,9 +667,11 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
       // household. It was one unconfirmed click.
       const confirmed = await hubConfirm({
         message: `Close "${poll.question}"?`,
-        description: isAnonymous(poll)
-          ? "Voting ends and the results are revealed to everyone. No record of who voted is kept. This can't be undone."
-          : "Voting ends and every vote — including who cast it — is revealed to everyone in the household. This can't be undone.",
+        description: (isAnonymous(poll)
+          ? "Voting ends and the results are revealed to everyone. No record of who voted is kept."
+          : "Voting ends and every vote — including who cast it — is revealed to everyone in the household.")
+          + (share.enabled ? " Any share link for this poll stops working." : "")
+          + " This can't be undone.",
         confirmLabel: "Close poll",
         destructive: true,
       });
