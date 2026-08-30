@@ -1,0 +1,313 @@
+{
+  "scenarios": [
+    {
+      "name": "a ballot stays sealed while the poll is open, and an anonymous poll marks no voter once it closes",
+      "members": {
+        "owner": "adult",
+        "voter": "adult"
+      },
+      "steps": [
+        {
+          "action": "seedRaw",
+          "sql": "INSERT INTO app_family_polls__polls (id, question, options_json, status, created_by, created_at, anonymous) VALUES (?, ?, ?, 'open', ?, datetime('now'), 1)",
+          "params": [
+            "ui-anon-poll",
+            "Where should we eat on Friday?",
+            "[{\"id\":\"opt-tacos\",\"text\":\"Tacos\"},{\"id\":\"opt-pizza\",\"text\":\"Pizza\"}]",
+            "{{owner}}"
+          ]
+        },
+        {
+          "action": "open",
+          "as": "voter"
+        },
+        {
+          "action": "waitFor",
+          "as": "voter",
+          "selector": "[data-testid=\"poll-card\"][data-poll-id=\"ui-anon-poll\"]"
+        },
+        {
+          "action": "click",
+          "as": "voter",
+          "selector": "[data-testid=\"poll-card\"][data-poll-id=\"ui-anon-poll\"]"
+        },
+        {
+          "action": "waitFor",
+          "as": "voter",
+          "selector": "[data-testid=\"poll-detail\"][data-poll-status=\"open\"]"
+        },
+        {
+          "action": "expectText",
+          "as": "voter",
+          "text": "This poll is anonymous",
+          "selector": "[data-testid=\"poll-notice\"]"
+        },
+        {
+          "action": "expectCount",
+          "as": "voter",
+          "selector": "[data-testid=\"option-count\"]",
+          "count": 0
+        },
+        {
+          "action": "click",
+          "as": "voter",
+          "selector": "[data-testid=\"vote-option\"][data-option-id=\"opt-tacos\"]"
+        },
+        {
+          "action": "expectText",
+          "as": "voter",
+          "text": "Your vote is final",
+          "selector": "[data-testid=\"poll-notice\"]"
+        },
+        {
+          "action": "expectCount",
+          "as": "voter",
+          "selector": "[data-testid=\"option-count\"]",
+          "count": 0
+        },
+        {
+          "action": "expectCount",
+          "as": "voter",
+          "selector": "[data-testid=\"option-selected-mark\"]",
+          "count": 0
+        },
+        {
+          "action": "open",
+          "as": "owner"
+        },
+        {
+          "action": "waitFor",
+          "as": "owner",
+          "selector": "[data-testid=\"poll-card\"][data-poll-id=\"ui-anon-poll\"]"
+        },
+        {
+          "action": "click",
+          "as": "owner",
+          "selector": "[data-testid=\"poll-card\"][data-poll-id=\"ui-anon-poll\"]"
+        },
+        {
+          "action": "waitFor",
+          "as": "owner",
+          "selector": "[data-testid=\"poll-detail\"][data-poll-status=\"open\"]"
+        },
+        {
+          "action": "expectText",
+          "as": "owner",
+          "text": "1 vote so far",
+          "selector": "[data-testid=\"poll-notice\"]"
+        },
+        {
+          "action": "expectCount",
+          "as": "owner",
+          "selector": "[data-testid=\"option-count\"]",
+          "count": 0
+        },
+        {
+          "action": "seedRaw",
+          "sql": "UPDATE app_family_polls__polls SET status = 'closed' WHERE id = ?",
+          "params": [
+            "ui-anon-poll"
+          ]
+        },
+        {
+          "action": "reload",
+          "as": "owner"
+        },
+        {
+          "action": "waitFor",
+          "as": "owner",
+          "selector": "[data-testid=\"poll-card\"][data-poll-id=\"ui-anon-poll\"]"
+        },
+        {
+          "action": "click",
+          "as": "owner",
+          "selector": "[data-testid=\"poll-card\"][data-poll-id=\"ui-anon-poll\"]"
+        },
+        {
+          "action": "waitFor",
+          "as": "owner",
+          "selector": "[data-testid=\"poll-detail\"][data-poll-status=\"closed\"]"
+        },
+        {
+          "action": "expectCount",
+          "as": "owner",
+          "selector": "[data-testid=\"option-count\"]",
+          "count": 2
+        },
+        {
+          "action": "expectText",
+          "as": "owner",
+          "text": "1 vote counted",
+          "selector": "[data-testid=\"poll-notice\"]"
+        },
+        {
+          "action": "expectText",
+          "as": "owner",
+          "text": "Votes were anonymous.",
+          "selector": "[data-testid=\"poll-notice\"]"
+        },
+        {
+          "action": "expectCount",
+          "as": "owner",
+          "selector": "[data-testid=\"option-selected-mark\"]",
+          "count": 0
+        },
+        {
+          "action": "reload",
+          "as": "voter"
+        },
+        {
+          "action": "waitFor",
+          "as": "voter",
+          "selector": "[data-testid=\"poll-card\"][data-poll-id=\"ui-anon-poll\"]"
+        },
+        {
+          "action": "click",
+          "as": "voter",
+          "selector": "[data-testid=\"poll-card\"][data-poll-id=\"ui-anon-poll\"]"
+        },
+        {
+          "action": "waitFor",
+          "as": "voter",
+          "selector": "[data-testid=\"poll-detail\"][data-poll-status=\"closed\"]"
+        },
+        {
+          "action": "expectCount",
+          "as": "voter",
+          "selector": "[data-testid=\"option-count\"]",
+          "count": 2
+        },
+        {
+          "action": "expectCount",
+          "as": "voter",
+          "selector": "[data-testid=\"option-selected-mark\"]",
+          "count": 0
+        }
+      ]
+    },
+    {
+      "name": "a poll built through the modal refuses one choice, survives a reload, and Cancel discards instead of creating",
+      "members": {
+        "member": "adult"
+      },
+      "steps": [
+        {
+          "action": "open"
+        },
+        {
+          "action": "waitFor",
+          "selector": "[data-testid=\"new-poll\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-testid=\"new-poll\"]"
+        },
+        {
+          "action": "waitFor",
+          "selector": "[data-testid=\"poll-create-modal\"]"
+        },
+        {
+          "action": "fill",
+          "selector": "[data-testid=\"field-question\"]",
+          "value": "Movie night on Saturday?"
+        },
+        {
+          "action": "fill",
+          "selector": "[data-testid=\"field-choice\"][data-choice-index=\"0\"]",
+          "value": "Friday"
+        },
+        {
+          "action": "click",
+          "selector": "[data-testid=\"save-poll\"]"
+        },
+        {
+          "action": "expectText",
+          "text": "Enter at least two choices.",
+          "selector": "[data-testid=\"modal-error\"]"
+        },
+        {
+          "action": "fill",
+          "selector": "[data-testid=\"field-choice\"][data-choice-index=\"1\"]",
+          "value": "Saturday"
+        },
+        {
+          "action": "click",
+          "selector": "[data-testid=\"save-poll\"]"
+        },
+        {
+          "action": "waitFor",
+          "selector": "[data-testid=\"poll-create-modal\"]",
+          "state": "detached"
+        },
+        {
+          "action": "waitFor",
+          "selector": "[data-testid=\"poll-detail\"][data-poll-status=\"open\"]"
+        },
+        {
+          "action": "expectText",
+          "text": "Movie night on Saturday?",
+          "selector": "[data-testid=\"poll-question\"]"
+        },
+        {
+          "action": "expectText",
+          "text": "When the poll closes, everyone can see how each member voted.",
+          "selector": "[data-testid=\"poll-notice\"]"
+        },
+        {
+          "action": "expectCount",
+          "selector": "[data-testid=\"vote-option\"]",
+          "count": 2
+        },
+        {
+          "action": "reload"
+        },
+        {
+          "action": "expectCount",
+          "selector": "[data-testid=\"poll-card\"]",
+          "count": 1
+        },
+        {
+          "action": "expectText",
+          "text": "Movie night on Saturday?",
+          "selector": "[data-testid=\"open-polls\"]"
+        },
+        {
+          "action": "expectText",
+          "text": "2 choices",
+          "selector": "[data-testid=\"poll-meta\"]"
+        },
+        {
+          "action": "click",
+          "selector": "[data-testid=\"new-poll\"]"
+        },
+        {
+          "action": "waitFor",
+          "selector": "[data-testid=\"poll-create-modal\"]"
+        },
+        {
+          "action": "fill",
+          "selector": "[data-testid=\"field-question\"]",
+          "value": "Discarded Draft"
+        },
+        {
+          "action": "click",
+          "selector": "[data-testid=\"create-cancel\"]"
+        },
+        {
+          "action": "waitFor",
+          "selector": "[data-testid=\"poll-create-modal\"]",
+          "state": "detached"
+        },
+        {
+          "action": "expectCount",
+          "selector": "[data-testid=\"poll-card\"]",
+          "count": 1
+        },
+        {
+          "action": "expectNoText",
+          "text": "Discarded Draft"
+        }
+      ]
+    }
+  ]
+}

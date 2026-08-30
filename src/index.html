@@ -365,14 +365,14 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
       const closed = poll.status === "closed";
       const turnoutSuffix = turnoutText(poll) ? ` · ${turnoutText(poll)}` : "";
       const badge = closed
-        ? '<span class="badge">Closed</span>'
-        : hasVoted(poll) ? '<span class="badge badge-voted">Voted ✓</span>' : '<span class="badge">Open</span>';
+        ? '<span class="badge" data-testid="poll-badge">Closed</span>'
+        : hasVoted(poll) ? '<span class="badge badge-voted" data-testid="poll-badge">Voted ✓</span>' : '<span class="badge" data-testid="poll-badge">Open</span>';
       return `
-        <article class="card poll-card" data-open-poll="${index}">
+        <article class="card poll-card" data-testid="poll-card" data-poll-id="${poll.id}" data-poll-status="${esc(poll.status)}" data-open-poll="${index}">
           <div class="row">
             <div>
-              <h2>${esc(poll.question)}</h2>
-              <div class="muted">Created by ${esc(creatorName(poll))} · ${pollOptions(poll).length} choices${isAnonymous(poll) ? " · anonymous" : ""}${turnoutSuffix}</div>
+              <h2 data-testid="poll-question">${esc(poll.question)}</h2>
+              <div class="muted" data-testid="poll-meta">Created by ${esc(creatorName(poll))} · ${pollOptions(poll).length} choices${isAnonymous(poll) ? " · anonymous" : ""}${turnoutSuffix}</div>
             </div>
             ${badge}
           </div>
@@ -394,12 +394,12 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
       return `
         <header class="header">
           <div><h1>🗳️ Polls</h1><div class="muted">One final vote per member · results revealed when the poll closes</div></div>
-          ${canSteward(me) ? '<button class="btn btn-primary" id="new-poll">+ New Poll</button>' : ""}
+          ${canSteward(me) ? '<button class="btn btn-primary" id="new-poll" data-testid="new-poll">+ New Poll</button>' : ""}
         </header>
-        ${errorMessage ? `<div class="error">${esc(errorMessage)}</div>` : ""}
-        ${polls.length ? `<div class="search-row"><input id="search" class="search-input" type="search" placeholder="Search polls…" aria-label="Search polls" value="${esc(searchQ)}" /></div>` : ""}
-        ${openCards || (searchQ ? `<div class="card empty">No open polls match "${esc(searchQ)}".</div>` : '<div class="card empty">No open polls yet.</div>')}
-        ${closedCards ? `<h2 style="margin:18px 0 10px">Closed polls</h2>${closedCards}` : ""}`;
+        ${errorMessage ? `<div class="error" data-testid="error">${esc(errorMessage)}</div>` : ""}
+        ${polls.length ? `<div class="search-row"><input id="search" data-testid="search" class="search-input" type="search" placeholder="Search polls…" aria-label="Search polls" value="${esc(searchQ)}" /></div>` : ""}
+        <div data-testid="open-polls">${openCards || (searchQ ? `<div class="card empty" data-testid="empty-state">No open polls match "${esc(searchQ)}".</div>` : '<div class="card empty" data-testid="empty-state">No open polls yet.</div>')}</div>
+        ${closedCards ? `<h2 style="margin:18px 0 10px">Closed polls</h2><div data-testid="closed-polls">${closedCards}</div>` : ""}`;
     }
 
     function detailHtml(poll) {
@@ -430,13 +430,14 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
         const fromLink = closed ? guestVoteLabel(guestCounts[option.id] ?? 0) : "";
         return `
           <button class="option ${mine === option.id ? "selected" : ""} ${closed && winners.has(option.id) ? "winner" : ""}"
+                  data-testid="vote-option" data-option-id="${option.id}"
                   data-vote-option="${index}" ${closed || voted || !me ? "disabled" : ""}>
             <span class="option-line">
-              <span>${esc(option.text)}${mine === option.id ? " ✓" : ""}</span>
-              ${closed ? `<strong>${count}</strong>` : ""}
+              <span data-testid="option-text">${esc(option.text)}${mine === option.id ? ` <span data-testid="option-selected-mark">✓</span>` : ""}</span>
+              ${closed ? `<strong data-testid="option-count">${count}</strong>` : ""}
             </span>
-            ${closed ? `<span class="bar"><div style="width:${pct}%"></div></span>` : ""}
-            ${fromLink ? `<span class="muted option-guest">${esc(fromLink)}</span>` : ""}
+            ${closed ? `<span class="bar" data-testid="option-bar"><div style="width:${pct}%"></div></span>` : ""}
+            ${fromLink ? `<span class="muted option-guest" data-testid="option-guest">${esc(fromLink)}</span>` : ""}
           </button>`;
       }).join("");
 
@@ -448,7 +449,7 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
         ? "This poll is anonymous — no record is kept of who voted for what."
         : "When the poll closes, everyone can see how each member voted.";
       const spoiledLine = closed && spoiled.length > 0
-        ? `<div class="notice">${spoiled.length} vote${spoiled.length === 1 ? "" : "s"} named a choice that isn't on this poll and ${spoiled.length === 1 ? "was" : "were"} not counted.</div>`
+        ? `<div class="notice" data-testid="spoiled-notice">${spoiled.length} vote${spoiled.length === 1 ? "" : "s"} named a choice that isn't on this poll and ${spoiled.length === 1 ? "was" : "were"} not counted.</div>`
         : "";
       // Turnout leads the notice on an open poll: "am I the only one who has
       // voted?" is the question the sealed view otherwise leaves unanswered.
@@ -460,31 +461,33 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
         ? `${guestBallots.length} of them came from a shared link, where anyone with the link could vote. `
         : "";
       const notice = (closed
-        ? `<div class="notice">This poll is closed. ${total} vote${total === 1 ? "" : "s"} counted. ${guestSentence}${anonymous ? "Votes were anonymous." : ""}</div>`
+        ? `<div class="notice" data-testid="poll-notice">This poll is closed. ${total} vote${total === 1 ? "" : "s"} counted. ${guestSentence}${anonymous ? "Votes were anonymous." : ""}</div>`
         : voted
-          ? `<div class="notice">${turnoutSentence}Your vote is final. Results are revealed when the poll closes. ${privacyLine}</div>`
-          : `<div class="notice">${turnoutSentence}Choose one option. Your vote cannot be changed after submission. ${privacyLine}</div>`) + spoiledLine;
+          ? `<div class="notice" data-testid="poll-notice">${turnoutSentence}Your vote is final. Results are revealed when the poll closes. ${privacyLine}</div>`
+          : `<div class="notice" data-testid="poll-notice">${turnoutSentence}Choose one option. Your vote cannot be changed after submission. ${privacyLine}</div>`) + spoiledLine;
 
       return `
-        <button class="back" id="back">← All polls</button>
-        ${errorMessage ? `<div class="error">${esc(errorMessage)}</div>` : ""}
+        <div data-testid="poll-detail" data-poll-id="${poll.id}" data-poll-status="${esc(poll.status)}" data-poll-anonymous="${anonymous ? "1" : "0"}">
+        <button class="back" id="back" data-testid="back">← All polls</button>
+        ${errorMessage ? `<div class="error" data-testid="error">${esc(errorMessage)}</div>` : ""}
         <section class="card">
           <div class="card-head">
             <div>
-              <h1>${esc(poll.question)}</h1>
+              <h1 data-testid="poll-question">${esc(poll.question)}</h1>
               <div class="muted">Created by ${esc(creatorName(poll))}</div>
             </div>
-            ${closed ? '<span class="badge">Closed</span>' : voted ? '<span class="badge badge-voted">Voted ✓</span>' : '<span class="badge">Open</span>'}
+            ${closed ? '<span class="badge" data-testid="poll-badge">Closed</span>' : voted ? '<span class="badge badge-voted" data-testid="poll-badge">Voted ✓</span>' : '<span class="badge" data-testid="poll-badge">Open</span>'}
           </div>
           <div class="card-body">
             ${notice}
             ${optionsHtml}
             ${!closed && canSteward(me) ? `<div class="actions">
-              ${share.enabled ? '<button class="btn" id="share-poll">🔗 Share</button>' : ""}
-              <button class="btn" id="close-poll">Close poll &amp; reveal results</button>
+              ${share.enabled ? '<button class="btn" id="share-poll" data-testid="share-poll">🔗 Share</button>' : ""}
+              <button class="btn" id="close-poll" data-testid="close-poll">Close poll &amp; reveal results</button>
             </div>` : ""}
           </div>
-        </section>`;
+        </section>
+        </div>`;
     }
 
     function bindActions() {
@@ -695,20 +698,20 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
       modal = document.createElement("div");
       modal.className = "modal-backdrop";
       modal.innerHTML = `
-        <div class="modal">
+        <div class="modal" data-testid="poll-create-modal">
           <h2>Create a poll</h2>
-          <div class="field"><label>Question</label><textarea id="poll-question" rows="2" maxlength="300"></textarea></div>
+          <div class="field"><label>Question</label><textarea id="poll-question" data-testid="field-question" rows="2" maxlength="300"></textarea></div>
           <div class="field">
             <label>Choices</label>
             <div id="choice-list">
-              <div class="option-input"><input maxlength="160" placeholder="Choice 1"></div>
-              <div class="option-input"><input maxlength="160" placeholder="Choice 2"></div>
+              <div class="option-input"><input maxlength="160" data-testid="field-choice" data-choice-index="0" placeholder="Choice 1"></div>
+              <div class="option-input"><input maxlength="160" data-testid="field-choice" data-choice-index="1" placeholder="Choice 2"></div>
             </div>
-            <button class="btn" id="add-choice" style="margin-top:8px">+ Add choice</button>
+            <button class="btn" id="add-choice" data-testid="add-choice" style="margin-top:8px">+ Add choice</button>
           </div>
           <div class="field">
             <label style="display:flex;align-items:center;gap:8px;font-weight:500">
-              <input type="checkbox" id="poll-anonymous">
+              <input type="checkbox" id="poll-anonymous" data-testid="field-anonymous">
               Anonymous poll
             </label>
             <div class="muted" style="margin-top:4px">
@@ -717,10 +720,10 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
               This can't be changed after the poll is created.
             </div>
           </div>
-          <div class="error" id="modal-error" hidden></div>
+          <div class="error" id="modal-error" data-testid="modal-error" hidden></div>
           <div class="actions">
-            <button class="btn" id="cancel-create">Cancel</button>
-            <button class="btn btn-primary" id="save-poll">Create Poll</button>
+            <button class="btn" id="cancel-create" data-testid="create-cancel">Cancel</button>
+            <button class="btn btn-primary" id="save-poll" data-testid="save-poll">Create Poll</button>
           </div>
         </div>`;
       document.body.appendChild(modal);
@@ -738,6 +741,8 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
       row.className = "option-input";
       const input = document.createElement("input");
       input.maxLength = 160;
+      input.dataset.testid = "field-choice";
+      input.dataset.choiceIndex = String(list.querySelectorAll("input").length);
       input.placeholder = `Choice ${list.querySelectorAll("input").length + 1}`;
       row.appendChild(input);
       list.appendChild(row);
