@@ -15,9 +15,9 @@
       --muted: var(--hub-text-muted, #64748b);
       --primary: var(--hub-primary, #111827);
       --primary-fg: var(--hub-primary-fg, #fff);
-      --green: #059669;
-      --green-bg: #d1fae5;
-      --red: #dc2626;
+      --green: var(--hub-tint-success-fg, #059669);
+      --green-bg: var(--hub-tint-success, #d1fae5);
+      --red: var(--hub-tint-danger-fg, #dc2626);
       --radius: var(--hub-radius, 12px);
     }
     body {
@@ -66,7 +66,7 @@
       display: inline-block;
       padding: 2px 8px;
       border-radius: 999px;
-      background: #f1f5f9;
+      background: var(--bg);
       color: var(--muted);
       font-size: .72rem;
       font-weight: 700;
@@ -84,10 +84,10 @@
       margin-top: 9px;
     }
     .option:not(:disabled):hover { border-color: var(--primary); }
-    .option.selected { border-color: var(--green); background: #ecfdf5; }
+    .option.selected { border-color: var(--green); background: var(--hub-tint-success, #ecfdf5); }
     .option.winner { box-shadow: inset 4px 0 var(--green); }
     .option-line { display: flex; justify-content: space-between; gap: 12px; }
-    .bar { height: 6px; background: #e2e8f0; border-radius: 999px; margin-top: 8px; overflow: hidden; }
+    .bar { height: 6px; background: var(--hub-tint-info, #e2e8f0); border-radius: 999px; margin-top: 8px; overflow: hidden; }
     .bar > div { height: 100%; background: var(--green); }
     .empty { padding: 48px 18px; text-align: center; color: var(--muted); }
     .back { border: 0; background: transparent; color: var(--muted); padding: 0; margin-bottom: 12px; }
@@ -97,8 +97,8 @@
       margin-bottom: 12px;
       font-size: .84rem;
     }
-    .notice { background: #f1f5f9; color: var(--muted); }
-    .error { background: #fee2e2; color: var(--red); }
+    .notice { background: var(--bg); color: var(--muted); }
+    .error { background: var(--hub-tint-danger, #fee2e2); color: var(--red); }
     .modal-backdrop {
       position: fixed;
       inset: 0;
