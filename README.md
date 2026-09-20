@@ -1,5 +1,7 @@
 # Polls
 
+A [Chickadee Bandit](https://chickadeebandit.com/app-library/family-polls) app.
+
 A simple Chickadee Bandit family polling app.
 
 - Adults create polls with fixed choices.
