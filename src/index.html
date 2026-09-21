@@ -148,7 +148,7 @@
   <main class="app" id="app"><div class="empty">Loading polls…</div></main>
 
   <script type="module">
-    import { esc, isAdult, hubConfirm, hubAlert, createShareHelper, searchMatch } from "/hub-sdk.js";
+    import { esc, isAdult, hubConfirm, hubAlert, createShareHelper, searchMatch, activeShareLinks } from "/hub-sdk.js";
     import { parseOptions, selectedOptionId, voteCounts, winningOptionIds, spoiledVotes, countedVotes, searchableFields, turnoutLabel, missingOptionRows, guestVoteLabel } from "./logic.js";
 
     const DB = window.__DB_URL ?? "";
@@ -552,11 +552,10 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
         hubAlert("Couldn't prepare this poll for sharing", { description: error?.message ?? "" });
         return;
       }
-      const status = await share.status();
+      const status = await share.listAll();
       shareLinks = status.links;
       shareEntitled = status.entitled;
-      const active = shareLinks.filter(link =>
-        link.itemId === pollId && !link.revokedAt && new Date(link.expiresAt) > new Date());
+      const active = activeShareLinks(shareLinks, pollId);
 
       const rows = active.map(link => `
         <div class="link-row">
