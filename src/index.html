@@ -193,8 +193,8 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
     let errorMessage = "";
 
     // Share links. `enabled` is false when the hub injected no share URLs
-    // (demo mode, or an older hub); guest voting on top of a link is premium,
-    // which `status().entitled` answers.
+    // (demo mode, or an older hub); guest voting on top of a link needs the
+    // `sharing` capability, which `status().entitled` answers.
     const share = createShareHelper(window.__SHARE_CREATE_URL, window.__SHARE_REVOKE_URL, window.__SHARE_LIST_URL);
     let shareModal = null;
     let shareLinks = [];
@@ -571,10 +571,10 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
           <button class="btn" data-share-revoke="${esc(link.id)}">Revoke</button>
         </div>`).join("");
 
-      // Guest voting rides on the premium `sharing` capability. Without it a
+      // Guest voting rides on the `sharing` capability. Without it a
       // link is read-only — the question and nothing else — so say that rather
       // than offering a checkbox the hub would refuse.
-      const premiumControls = shareEntitled ? `
+      const sharingControls = shareEntitled ? `
         <div class="field">
           <label style="display:flex;align-items:center;gap:8px;font-weight:500">
             <input type="checkbox" id="share-writable" checked>
@@ -584,7 +584,7 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
                  placeholder="Optional password (min 6 characters)" style="margin-top:8px">
         </div>
       ` : `<p class="tiny muted" style="margin-top:10px">
-             This link will show the question only. Collecting votes from outside the household is part of premium sharing.
+             This link will show the question only. Collecting votes from outside the household needs an active plan.
            </p>`;
 
       closeShareModal();
@@ -599,7 +599,7 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
             poll as a straw poll. The link stops working the moment the poll is closed.
           </p>
           ${rows || `<p class="tiny muted" style="padding:8px 0">No active links yet.</p>`}
-          ${premiumControls}
+          ${sharingControls}
           <div class="row" style="margin-top:14px;gap:8px">
             <select id="share-expiry" class="tiny" style="width:auto">
               <option value="24">1 day</option>

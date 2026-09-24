@@ -16,7 +16,7 @@ database writes to votes and receipts are disabled by row policy.
 
 An open poll can be shared as a link (`shareable.poll`). Visitors see the
 question and its choices — never who voted, never the running result — and, on a
-writable link (premium `sharing`), can vote without an account.
+writable link (the `sharing` capability), can vote without an account.
 
 The public form's choices come from `poll_options` via the hub's
 `values_from` select: a projection of the poll's own `options_json`, keyed on
