@@ -150,6 +150,162 @@
           "expect": { "status": 200, "rowCount": 1 }
         }
       ]
+    },
+    {
+      "name": "while a poll is open no other member, not even the adult who created it, can see who voted or how, and nobody can plant, change or withdraw a ballot or receipt through app SQL",
+      "members": { "creator": "adult", "voter": "adult", "kid": "child" },
+      "steps": [
+        {
+          "action": "seedRaw",
+          "sql": "INSERT INTO app_family_polls__polls (id, question, options_json, status, anonymous, created_by, created_at) VALUES ('p1', 'Pizza or tacos?', '[]', 'open', 0, ?, '2026-01-01T00:00:00Z')",
+          "params": ["{{creator}}"]
+        },
+        {
+          "action": "seedRaw",
+          "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES ('v1', 'p1', ?, 'o1', '2026-01-01T00:00:00Z'), ('v2', 'p1', ?, 'o2', '2026-01-01T00:00:00Z')",
+          "params": ["{{voter}}", "{{kid}}"]
+        },
+        {
+          "action": "seedRaw",
+          "sql": "INSERT INTO app_family_polls__vote_receipts (poll_id, member_id, created_at) VALUES ('p1', ?, '2026-01-01T00:00:00Z'), ('p1', ?, '2026-01-01T00:00:00Z')",
+          "params": ["{{voter}}", "{{kid}}"]
+        },
+        {
+          "action": "db",
+          "as": "creator",
+          "sql": "SELECT member_id, option_id FROM app_family_polls__poll_votes WHERE poll_id = ?",
+          "params": ["p1"],
+          "expect": { "status": 200, "rowCount": 0 }
+        },
+        {
+          "action": "db",
+          "as": "creator",
+          "sql": "SELECT member_id FROM app_family_polls__vote_receipts WHERE poll_id = ?",
+          "params": ["p1"],
+          "expect": { "status": 200, "rowCount": 0 }
+        },
+        {
+          "action": "db",
+          "as": "kid",
+          "sql": "SELECT member_id, option_id FROM app_family_polls__poll_votes WHERE poll_id = ?",
+          "params": ["p1"],
+          "expect": { "status": 200, "rowCount": 1, "rowsContain": [{ "member_id": "scn-kid", "option_id": "o2" }] }
+        },
+        {
+          "action": "db",
+          "as": "voter",
+          "sql": "UPDATE app_family_polls__poll_votes SET option_id = 'o2' WHERE poll_id = ? AND member_id = ?",
+          "params": ["p1", "{{voter}}"],
+          "expect": { "status": 403, "errorIncludes": "endpoint" }
+        },
+        {
+          "action": "db",
+          "as": "voter",
+          "sql": "DELETE FROM app_family_polls__vote_receipts WHERE poll_id = ? AND member_id = ?",
+          "params": ["p1", "{{voter}}"],
+          "expect": { "status": 403, "errorIncludes": "endpoint" }
+        },
+        {
+          "action": "db",
+          "as": "creator",
+          "sql": "INSERT INTO app_family_polls__vote_receipts (poll_id, member_id, created_at) VALUES (?, ?, ?)",
+          "params": ["p1", "{{creator}}", "2026-01-01T00:00:00Z"],
+          "expect": { "status": 403, "errorIncludes": "endpoint" }
+        },
+        {
+          "action": "db",
+          "as": "creator",
+          "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, ?)",
+          "params": ["v3", "p1", "{{kid}}", "o1", "2026-01-01T00:00:00Z"],
+          "expect": { "status": 403, "errorIncludes": "endpoint" }
+        },
+        {
+          "action": "db",
+          "as": "voter",
+          "sql": "SELECT option_id FROM app_family_polls__poll_votes WHERE poll_id = ?",
+          "params": ["p1"],
+          "expect": { "status": 200, "rowCount": 1, "rowsContain": [{ "option_id": "o1" }] }
+        },
+        { "action": "seedRaw", "sql": "UPDATE app_family_polls__polls SET status = 'closed' WHERE id = 'p1'" },
+        {
+          "action": "db",
+          "as": "creator",
+          "sql": "SELECT member_id, option_id FROM app_family_polls__poll_votes WHERE poll_id = ?",
+          "params": ["p1"],
+          "expect": {
+            "status": 200,
+            "rowCount": 2,
+            "rowsContain": [
+              { "member_id": "scn-voter", "option_id": "o1" },
+              { "member_id": "scn-kid", "option_id": "o2" }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "in a space a voter's receipt stays theirs alone even after the poll closes: neither the steward nor another participant learns who voted on an anonymous poll",
+      "context": "shared_space",
+      "members": { "steward": "admin", "voter": "adult", "other": "adult" },
+      "steps": [
+        {
+          "action": "seedRaw",
+          "sql": "INSERT INTO app_family_polls__polls (id, question, options_json, status, anonymous, created_by, created_at) VALUES ('p1', 'New meeting night?', '[]', 'open', 1, ?, '2026-01-01T00:00:00Z')",
+          "params": ["{{steward}}"]
+        },
+        {
+          "action": "seedRaw",
+          "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES ('v1', 'p1', NULL, 'o1', '1970-01-01T00:00:00Z')"
+        },
+        {
+          "action": "seedRaw",
+          "sql": "INSERT INTO app_family_polls__vote_receipts (poll_id, member_id, created_at) VALUES ('p1', ?, '2026-01-01T00:00:00Z')",
+          "params": ["{{voter}}"]
+        },
+        {
+          "action": "db",
+          "as": "steward",
+          "sql": "SELECT option_id FROM app_family_polls__poll_votes WHERE poll_id = ?",
+          "params": ["p1"],
+          "expect": { "status": 200, "rowCount": 0 }
+        },
+        {
+          "action": "db",
+          "as": "steward",
+          "sql": "SELECT member_id FROM app_family_polls__vote_receipts WHERE poll_id = ?",
+          "params": ["p1"],
+          "expect": { "status": 200, "rowCount": 0 }
+        },
+        { "action": "seedRaw", "sql": "UPDATE app_family_polls__polls SET status = 'closed' WHERE id = 'p1'" },
+        {
+          "action": "db",
+          "as": "other",
+          "sql": "SELECT member_id, option_id FROM app_family_polls__poll_votes WHERE poll_id = ?",
+          "params": ["p1"],
+          "expect": { "status": 200, "rowCount": 1, "rowsContain": [{ "member_id": null, "option_id": "o1" }] }
+        },
+        {
+          "action": "db",
+          "as": "steward",
+          "sql": "SELECT member_id FROM app_family_polls__vote_receipts WHERE poll_id = ?",
+          "params": ["p1"],
+          "expect": { "status": 200, "rowCount": 0 }
+        },
+        {
+          "action": "db",
+          "as": "other",
+          "sql": "SELECT member_id FROM app_family_polls__vote_receipts WHERE poll_id = ?",
+          "params": ["p1"],
+          "expect": { "status": 200, "rowCount": 0 }
+        },
+        {
+          "action": "db",
+          "as": "voter",
+          "sql": "SELECT member_id FROM app_family_polls__vote_receipts WHERE poll_id = ?",
+          "params": ["p1"],
+          "expect": { "status": 200, "rowCount": 1, "rowsContain": [{ "member_id": "scn-voter" }] }
+        }
+      ]
     }
   ]
 }
