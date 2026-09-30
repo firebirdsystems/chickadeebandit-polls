@@ -17,6 +17,12 @@
   },
   "contexts": ["household", "shared_space", "shared_space.roster"],
   "storage": "db",
+  "preload": {
+    "polls": {"sql": "SELECT * FROM app_family_polls__polls ORDER BY created_at DESC LIMIT 200"},
+    "poll_votes": {"sql": "SELECT poll_id, member_id, option_id, created_at FROM app_family_polls__poll_votes ORDER BY created_at LIMIT 2000"},
+    "vote_receipts": {"sql": "SELECT poll_id FROM app_family_polls__vote_receipts LIMIT 200"},
+    "guest_votes": {"sql": "SELECT poll_id, option_id FROM app_family_polls__guest_votes ORDER BY created_at LIMIT 5000"}
+  },
   "db_plaintext_columns": ["source"],
   "glance": {
     "source": {
