@@ -186,6 +186,191 @@
       ]
     },
     {
+      "name": "a timed poll shows a countdown while it runs, and once time is up it takes no votes and leads the list even though no adult has closed it",
+      "members": {
+        "owner": "adult",
+        "voter": "adult"
+      },
+      "steps": [
+        {
+          "action": "seedRaw",
+          "sql": "INSERT INTO app_family_polls__polls (id, question, options_json, status, created_by, created_at, anonymous, closes_at, results_at) VALUES (?, ?, ?, 'open', ?, strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-2 minutes'), 0, strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '+1 hour'), strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '+1 hour'))",
+          "params": [
+            "ui-timed-poll",
+            "What should we pick up for dinner?",
+            "[{\"id\":\"opt-thai\",\"text\":\"Thai\"},{\"id\":\"opt-sushi\",\"text\":\"Sushi\"}]",
+            "{{owner}}"
+          ]
+        },
+        {
+          "action": "seedRaw",
+          "sql": "INSERT INTO app_family_polls__polls (id, question, options_json, status, created_by, created_at, anonymous, closes_at, results_at) VALUES (?, ?, ?, 'open', ?, strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-1 minute'), 0, strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-10 minutes'), strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-10 minutes'))",
+          "params": [
+            "ui-ended-poll",
+            "Breakfast tomorrow?",
+            "[{\"id\":\"opt-pancakes\",\"text\":\"Pancakes\"},{\"id\":\"opt-eggs\",\"text\":\"Eggs\"}]",
+            "{{owner}}"
+          ]
+        },
+        {
+          "action": "open",
+          "as": "voter"
+        },
+        {
+          "action": "waitFor",
+          "as": "voter",
+          "selector": "[data-testid=\"poll-card\"][data-poll-id=\"ui-timed-poll\"][data-poll-ended=\"0\"]"
+        },
+        {
+          "action": "expectText",
+          "as": "voter",
+          "text": "Closes in",
+          "selector": "[data-testid=\"poll-card\"][data-poll-id=\"ui-timed-poll\"] [data-testid=\"countdown\"]"
+        },
+        {
+          "action": "waitFor",
+          "as": "voter",
+          "selector": "[data-testid=\"poll-card\"][data-poll-id=\"ui-ended-poll\"][data-poll-ended=\"1\"]"
+        },
+        {
+          "action": "expectText",
+          "as": "voter",
+          "text": "Time's up",
+          "selector": "[data-testid=\"poll-card\"][data-poll-id=\"ui-ended-poll\"] [data-testid=\"poll-badge\"]"
+        },
+        {
+          "action": "expectText",
+          "as": "voter",
+          "text": "Breakfast tomorrow?",
+          "selector": "[data-testid=\"open-polls\"] [data-testid=\"poll-card\"]:first-child [data-testid=\"poll-question\"]"
+        },
+        {
+          "action": "click",
+          "as": "voter",
+          "selector": "[data-testid=\"poll-card\"][data-poll-id=\"ui-ended-poll\"]"
+        },
+        {
+          "action": "waitFor",
+          "as": "voter",
+          "selector": "[data-testid=\"poll-detail\"][data-poll-id=\"ui-ended-poll\"][data-poll-status=\"open\"][data-poll-ended=\"1\"]"
+        },
+        {
+          "action": "expectText",
+          "as": "voter",
+          "text": "Time's up",
+          "selector": "[data-testid=\"poll-notice\"]"
+        },
+        {
+          "action": "expectCount",
+          "as": "voter",
+          "selector": "[data-testid=\"vote-option\"]:not([disabled])",
+          "count": 0
+        },
+        {
+          "action": "expectCount",
+          "as": "voter",
+          "selector": "[data-testid=\"option-count\"]",
+          "count": 2
+        },
+        {
+          "action": "expectText",
+          "as": "voter",
+          "text": "0 votes counted",
+          "selector": "[data-testid=\"poll-notice\"]"
+        },
+        {
+          "action": "expectCount",
+          "as": "voter",
+          "selector": "[data-testid=\"close-poll\"]",
+          "count": 0
+        },
+        {
+          "action": "click",
+          "as": "voter",
+          "selector": "[data-testid=\"back\"]"
+        },
+        {
+          "action": "click",
+          "as": "voter",
+          "selector": "[data-testid=\"poll-card\"][data-poll-id=\"ui-timed-poll\"]"
+        },
+        {
+          "action": "waitFor",
+          "as": "voter",
+          "selector": "[data-testid=\"poll-detail\"][data-poll-id=\"ui-timed-poll\"][data-poll-ended=\"0\"]"
+        },
+        {
+          "action": "expectText",
+          "as": "voter",
+          "text": "Closes in",
+          "selector": "[data-testid=\"poll-notice\"] [data-testid=\"countdown\"]"
+        },
+        {
+          "action": "click",
+          "as": "voter",
+          "selector": "[data-testid=\"vote-option\"][data-option-id=\"opt-thai\"]"
+        },
+        {
+          "action": "expectText",
+          "as": "voter",
+          "text": "Your vote is final",
+          "selector": "[data-testid=\"poll-notice\"]"
+        },
+        {
+          "action": "open",
+          "as": "owner"
+        },
+        {
+          "action": "waitFor",
+          "as": "owner",
+          "selector": "[data-testid=\"poll-card\"][data-poll-id=\"ui-ended-poll\"][data-poll-ended=\"1\"]"
+        },
+        {
+          "action": "click",
+          "as": "owner",
+          "selector": "[data-testid=\"poll-card\"][data-poll-id=\"ui-ended-poll\"]"
+        },
+        {
+          "action": "waitFor",
+          "as": "owner",
+          "selector": "[data-testid=\"close-poll\"]"
+        },
+        {
+          "action": "expectText",
+          "as": "owner",
+          "text": "Close poll & finalize",
+          "selector": "[data-testid=\"close-poll\"]"
+        },
+        {
+          "action": "waitFor",
+          "as": "owner",
+          "selector": "[data-testid=\"ask-again\"]"
+        },
+        {
+          "action": "click",
+          "as": "owner",
+          "selector": "[data-testid=\"ask-again\"]"
+        },
+        {
+          "action": "waitFor",
+          "as": "owner",
+          "selector": "[data-testid=\"poll-create-modal\"]"
+        },
+        {
+          "action": "expectText",
+          "as": "owner",
+          "text": "Breakfast tomorrow?",
+          "selector": "[data-testid=\"field-question\"]"
+        },
+        {
+          "action": "expectCount",
+          "as": "owner",
+          "selector": "[data-testid=\"field-choice\"][data-choice-index=\"1\"][value=\"Eggs\"]",
+          "count": 1
+        }
+      ]
+    },
+    {
       "name": "a poll built through the modal refuses one choice, survives a reload, and Cancel discards instead of creating",
       "members": {
         "member": "adult"

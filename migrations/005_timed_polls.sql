@@ -1,0 +1,25 @@
+-- Timed and live polls: "what should we pick up for dinner?" needs an answer in
+-- an hour, not whenever an adult remembers to close it — and often wants the
+-- tally visible while it runs.
+--
+-- Two optional instants (ISO-8601 with a zone, written by the app as UTC). Both
+-- NULL keeps today's behaviour exactly: open until an adult closes it, ballots
+-- sealed until then.
+--
+-- `closes_at` — when voting ends. Declared as the `anonymous_responses` session
+--   deadline (`session_deadline_column`), so the hub's vote endpoint refuses a
+--   ballot once it has passed; the row's `status` stays 'open' until an adult
+--   closes it, which is what freezes the poll.
+--
+-- `results_at` — when the ballot rows become readable to the household.
+--   Declared as `visible_after_parent_column` on every sealed ballot table
+--   (member ballots, legacy votes, guest ballots), so the seal lifts on its own
+--   at that instant, no close required. The app sets it to `closes_at` for a
+--   timed poll (results the moment time is up), to `created_at` for a LIVE poll
+--   (tally visible as votes land), and leaves it NULL for a poll revealed only
+--   by closing.
+--
+-- `_at` suffix: plaintext by the platform's built-in list, which is what lets
+-- the row policy compare `results_at` in SQL and the widget sort on `closes_at`.
+ALTER TABLE app_family_polls__polls ADD COLUMN closes_at TEXT;
+ALTER TABLE app_family_polls__polls ADD COLUMN results_at TEXT;

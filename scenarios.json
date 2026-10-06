@@ -49,6 +49,75 @@
       ]
     },
     {
+      "name": "results_at lifts the seal by the clock: a timed poll's ballots (guest ones too) open the moment it ends, a live poll's from the start, and a poll with no results_at stays sealed while open",
+      "members": { "a": "adult", "b": "adult" },
+      "steps": [
+        {
+          "action": "seedRaw",
+          "sql": "INSERT INTO app_family_polls__polls (id, question, options_json, status, created_by, created_at, closes_at, results_at) VALUES ('ended', 'Dinner?', '[]', 'open', ?, '2026-01-01T00:00:00Z', '2026-01-01T01:00:00Z', '2026-01-01T01:00:00Z'), ('live', 'Movie?', '[]', 'open', ?, '2026-01-01T00:00:00Z', '2999-01-01T00:00:00Z', '2026-01-01T00:00:00Z'), ('pending', 'Trip?', '[]', 'open', ?, '2026-01-01T00:00:00Z', '2999-01-01T00:00:00Z', '2999-01-01T00:00:00Z'), ('untimed', 'Vacation?', '[]', 'open', ?, '2026-01-01T00:00:00Z', NULL, NULL)",
+          "params": ["{{a}}", "{{a}}", "{{a}}", "{{a}}"]
+        },
+        {
+          "action": "seedRaw",
+          "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES ('v1', 'ended', ?, 'o1', '2026-01-01T00:10:00Z'), ('v2', 'live', ?, 'o1', '2026-01-01T00:10:00Z'), ('v3', 'pending', ?, 'o1', '2026-01-01T00:10:00Z'), ('v4', 'untimed', ?, 'o1', '2026-01-01T00:10:00Z')",
+          "params": ["{{b}}", "{{b}}", "{{b}}", "{{b}}"]
+        },
+        {
+          "action": "seedRaw",
+          "sql": "INSERT INTO app_family_polls__guest_votes (id, poll_id, option_id, source, created_at) VALUES ('g1', 'ended', 'o2', 'external', '2026-01-01T00:20:00Z'), ('g2', 'pending', 'o2', 'external', '2026-01-01T00:20:00Z')"
+        },
+        {
+          "action": "db",
+          "as": "a",
+          "sql": "SELECT option_id FROM app_family_polls__poll_votes WHERE poll_id = ?",
+          "params": ["ended"],
+          "expect": { "status": 200, "rowCount": 1 }
+        },
+        {
+          "action": "db",
+          "as": "a",
+          "sql": "SELECT option_id FROM app_family_polls__guest_votes WHERE poll_id = ?",
+          "params": ["ended"],
+          "expect": { "status": 200, "rowCount": 1 }
+        },
+        {
+          "action": "db",
+          "as": "a",
+          "sql": "SELECT option_id FROM app_family_polls__poll_votes WHERE poll_id = ?",
+          "params": ["live"],
+          "expect": { "status": 200, "rowCount": 1 }
+        },
+        {
+          "action": "db",
+          "as": "a",
+          "sql": "SELECT option_id FROM app_family_polls__poll_votes WHERE poll_id = ?",
+          "params": ["pending"],
+          "expect": { "status": 200, "rowCount": 0 }
+        },
+        {
+          "action": "db",
+          "as": "a",
+          "sql": "SELECT option_id FROM app_family_polls__guest_votes WHERE poll_id = ?",
+          "params": ["pending"],
+          "expect": { "status": 200, "rowCount": 0 }
+        },
+        {
+          "action": "db",
+          "as": "a",
+          "sql": "SELECT option_id FROM app_family_polls__poll_votes WHERE poll_id = ?",
+          "params": ["untimed"],
+          "expect": { "status": 200, "rowCount": 0 }
+        },
+        {
+          "action": "db",
+          "as": "b",
+          "sql": "SELECT option_id FROM app_family_polls__poll_votes WHERE poll_id = ?",
+          "params": ["pending"],
+          "expect": { "status": 200, "rowCount": 1 }
+        }
+      ]
+    },
+    {
       "name": "ballots cast through a share link are sealed like member ballots, and no member can forge one",
       "members": { "a": "adult" },
       "steps": [

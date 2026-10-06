@@ -41,6 +41,9 @@ describe("manifest", () => {
   it("seals votes until the poll closes and keeps writes endpoint-only", () => {
     // `votes` is the pre-anonymity table, kept because migrations are
     // append-only; it stays governed so it can never become readable.
+    // `results_at` lifts the seal by the clock as well: a timed poll's ballots
+    // become readable the instant it ends, a live poll's from its creation,
+    // and a poll with none stays sealed until an adult closes it.
     expect(manifest.row_policies.votes).toEqual({
       kind: "sealed_until",
       fk_column: "poll_id",
@@ -48,6 +51,7 @@ describe("manifest", () => {
       writer_column: "member_id",
       parent_status_column: "status",
       visible_parent_status_values: ["closed"],
+      visible_after_parent_column: "results_at",
       endpoint_writes_only: true,
     });
     expect(manifest.row_policies.poll_votes).toEqual({
@@ -57,6 +61,7 @@ describe("manifest", () => {
       writer_column: "member_id",
       parent_status_column: "status",
       visible_parent_status_values: ["closed"],
+      visible_after_parent_column: "results_at",
       endpoint_writes_only: true,
     });
   });
@@ -88,6 +93,21 @@ describe("manifest", () => {
     expect(manifest.anonymous_responses.response_question_column).toBeUndefined();
   });
 
+  it("lets a poll close itself on a deadline the hub enforces", () => {
+    // `closes_at` is the session deadline: the vote endpoint refuses a ballot
+    // past it, and the results endpoint releases the tally without an adult
+    // having to close the poll. The platform requires somewhere to release TO,
+    // which is `result_visible_values`.
+    expect(manifest.anonymous_responses.session_deadline_column).toBe("closes_at");
+    expect(manifest.anonymous_responses.result_visible_values).toEqual(["closed"]);
+    // The seal lifts by status OR by `results_at` — the app writes a timed
+    // poll's results_at equal to its closes_at, so the rows the view tallies
+    // (guest ballots included) open at the same instant voting ends.
+    expect(manifest.row_policies.poll_votes.visible_parent_status_values).toEqual(["closed"]);
+    expect(manifest.row_policies.poll_votes.visible_after_parent_column).toBe("results_at");
+    expect(manifest.row_policies.guest_votes.visible_after_parent_column).toBe("results_at");
+  });
+
   it("seals link ballots exactly as it seals member ballots", () => {
     // A guest ballot has no member behind it, so `member_id` is always NULL and
     // nothing ever matches the writer comparison — which is what keeps these
@@ -101,6 +121,7 @@ describe("manifest", () => {
       writer_column: "member_id",
       parent_status_column: "status",
       visible_parent_status_values: ["closed"],
+      visible_after_parent_column: "results_at",
       endpoint_writes_only: true,
       max_rows: 5000,
     });
@@ -136,6 +157,11 @@ describe("manifest", () => {
     // it sets must be plaintext: `option_id` by suffix, `source` by declaration.
     expect(manifest.db_plaintext_columns).toContain("source");
     expect(item.submit.fixed_values).toEqual({ source: "external" });
+    // The link stops taking guest votes at the poll's own deadline — the same
+    // instant the member vote endpoint refuses ballots — while the page itself
+    // stays readable. Without this a link outlived the result it was feeding.
+    expect(item.submit.until_column).toBe("closes_at");
+    expect(item.submit.until_grace_minutes).toBeUndefined();
   });
 
   it("does not let a member publish the guest-vote event", () => {
@@ -145,10 +171,15 @@ describe("manifest", () => {
     expect(manifest.publishes).not.toContain(manifest.shareable.poll.submit.event);
   });
 
-  it("publishes only an adult-gated creation event", () => {
+  it("publishes only an adult-gated creation event, and alerts through the app's own send", () => {
     expect(manifest.publishes).toEqual(["poll.created"]);
     expect(manifest.publish_acls["poll.created"].require_role).toBe("adult");
-    expect(manifest.alert_on).toEqual(["poll.created"]);
+    // No `alert_on`: the creator chooses "Notify everyone" in the form, which
+    // sends a real notification (push + inbox) through /api/notifications/send.
+    // A bell entry derived from the event as well would be the same news twice.
+    expect(manifest.alert_on).toBeUndefined();
+    // And no send ACL: the hub's household policy already lets an adult notify
+    // everyone, and only adults create polls.
     expect(manifest.notification_acls).toBeUndefined();
   });
 });
@@ -198,6 +229,16 @@ describe("migration", () => {
 
   it("enforces one vote per member per poll", () => {
     expect(migration).toMatch(/UNIQUE \(poll_id, member_id\)/i);
+  });
+
+  it("adds an optional closing time without touching anything else", () => {
+    const timed = readFileSync(join(root, "migrations/005_timed_polls.sql"), "utf8");
+    // Nullable, no default: NULL is "until an adult closes it", which is what
+    // every existing poll keeps.
+    expect(timed).toMatch(/ALTER TABLE app_family_polls__polls ADD COLUMN closes_at TEXT;/);
+    expect(timed).toMatch(/ALTER TABLE app_family_polls__polls ADD COLUMN results_at TEXT;/);
+    expect(timed).not.toMatch(/NOT NULL|DEFAULT/);
+    expect(timed.match(/ALTER TABLE|CREATE TABLE|INSERT|UPDATE/g)).toHaveLength(2);
   });
 });
 

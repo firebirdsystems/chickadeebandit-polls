@@ -35,6 +35,8 @@
     .dot { width: 8px; height: 8px; border-radius: 50%; background: #f59e0b; }
     .dot.voted { background: #059669; }
     .badge { color: #059669; font-size: 10px; font-weight: 700; }
+    .badge.ended { color: #b45309; }
+    .meta.urgent { color: #dc2626; font-weight: 700; }
     .empty { padding: 30px 12px; text-align: center; color: #94a3b8; }
     .foot a { color: inherit; font-weight: 700; text-decoration: none; }
   </style>
@@ -43,7 +45,7 @@
   <div id="root"><div class="empty">Loading…</div></div>
   <script type="module">
     import { esc } from "/hub-sdk.js";
-    import { parseOptions } from "./logic.js";
+    import { parseOptions, sortOpenPolls, pollEnded, countdownLabel, countdownUrgent } from "./logic.js";
 
     const DB = window.__DB_URL ?? "";
     const APP_ID = window.__APP_ID ?? "family-polls";
@@ -61,6 +63,8 @@
       return body;
     }
 
+    let loaded = { polls: [], receipts: [] };
+
     async function load() {
       const [pollResult, voteResult] = await Promise.all([
         db("SELECT * FROM app_family_polls__polls WHERE status = 'open' ORDER BY created_at DESC LIMIT 5"),
@@ -69,22 +73,28 @@
         // this returns just this member's rows). Bounded, like the main view.
         db("SELECT poll_id FROM app_family_polls__vote_receipts LIMIT 200"),
       ]);
-      render(pollResult.rows ?? [], voteResult.rows ?? []);
+      loaded = { polls: pollResult.rows ?? [], receipts: voteResult.rows ?? [] };
+      render(loaded.polls, loaded.receipts);
     }
 
     function render(polls, receipts) {
+      const now = new Date();
+      // Same order as the app: time's-up first, then soonest-closing, then the
+      // rest. The widget has no inputs, so a periodic full repaint is fine.
       const rows = polls.length
-        ? polls.map(poll => {
+        ? sortOpenPolls(polls, now).map(poll => {
             const voted = Boolean(ME) && receipts.some(receipt => receipt.poll_id === poll.id);
+            const isEnded = pollEnded(poll, now);
+            const countdown = countdownLabel(poll.closes_at, now);
             const href = `/run/${APP_ID}?pollId=${encodeURIComponent(poll.id)}`;
             return `
               <a class="row" href="${href}">
                 <span class="dot ${voted ? "voted" : ""}"></span>
                 <span class="main">
                   <span class="question">${esc(poll.question)}</span>
-                  <span class="meta">${parseOptions(poll.options_json).length} choices</span>
+                  <span class="meta ${countdownUrgent(poll.closes_at, now) && !isEnded ? "urgent" : ""}">${parseOptions(poll.options_json).length} choices${countdown && !isEnded ? ` · ${esc(countdown)}` : ""}</span>
                 </span>
-                ${voted ? '<span class="badge">Voted ✓</span>' : ""}
+                ${isEnded ? '<span class="badge ended">Time\'s up</span>' : voted ? '<span class="badge">Voted ✓</span>' : ""}
               </a>`;
           }).join("")
         : '<div class="empty">No open polls</div>';
@@ -95,7 +105,12 @@
         <div class="foot"><a href="/run/${APP_ID}">Open polls →</a></div>`;
     }
 
-    load().catch(() => {
+    load().then(() => {
+      // Countdowns drift without a repaint; once a minute is plenty at the
+      // widget's coarseness. A repaint from the rows already in hand — no
+      // re-read, so an idle dashboard costs the hub nothing.
+      setInterval(() => render(loaded.polls, loaded.receipts), 60_000);
+    }).catch(() => {
       document.getElementById("root").innerHTML = '<div class="empty">Unable to load polls</div>';
     });
   </script>

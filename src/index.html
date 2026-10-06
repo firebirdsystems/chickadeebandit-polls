@@ -72,6 +72,9 @@
       font-weight: 700;
     }
     .badge-voted { background: var(--green-bg); color: var(--green); }
+    .badge-ended { background: var(--hub-tint-warning, #fef3c7); color: var(--hub-tint-warning-fg, #b45309); }
+    .countdown { font-weight: 700; }
+    .countdown.urgent { color: var(--red); }
     .option {
       width: 100%;
       display: block;
@@ -149,12 +152,15 @@
 
   <script type="module">
     import { esc, isAdult, hubConfirm, hubAlert, createShareHelper, searchMatch, activeShareLinks } from "/hub-sdk.js";
-    import { parseOptions, selectedOptionId, voteCounts, winningOptionIds, spoiledVotes, countedVotes, searchableFields, turnoutLabel, missingOptionRows, guestVoteLabel } from "./logic.js";
+    import { parseOptions, selectedOptionId, voteCounts, winningOptionIds, spoiledVotes, countedVotes, searchableFields, turnoutLabel, missingOptionRows, guestVoteLabel, pollEnded, countdownLabel, countdownUrgent, closesAtFromChoice, deadlinePassed, sortOpenPolls, resultsReleased, resultsAtFor } from "./logic.js";
 
     const DB = window.__DB_URL ?? "";
     const CONTEXT = window.__CONTEXT_URL ?? "";
     const SUBMIT_RESPONSE = window.__SUBMIT_RESPONSE_URL ?? "";
     const RESPONSE_PROGRESS = window.__RESPONSE_PROGRESS_URL ?? "";
+    // The hub's notification send: push + inbox to the chosen audience, under
+    // the household's notification policy (an adult may notify everyone).
+    const NOTIFY = window.__NOTIFY_URL ?? "/api/notifications/send";
     const EVENTS = window.__EVENTS_URL ?? "/api/events";
     const APP_ID = window.__APP_ID ?? "family-polls";
     const HUB_MEMBER = window.__CURRENT_MEMBER ?? null;
@@ -177,6 +183,10 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
     let myReceipts = new Set();
     let turnout = new Map();   // poll id -> voters so far; absent means unknown
     let selectedPollId = null;
+    // Which polls the last countdown tick saw as ended, so the tick can tell a
+    // poll that has just crossed its deadline and repaint the view once.
+    let endedSeen = new Set();
+    const COUNTDOWN_TICK_MS = 30_000;
 
     /** Read bounds — see loadData. */
     const POLL_LIMIT = 200;
@@ -238,6 +248,7 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
           status: "open",
           created_by: "demo-adult",
           created_at: now,
+          closes_at: new Date(Date.now() + 60 * 60_000).toISOString(),
         }];
         members = [{ id: "demo-adult", name: "Alex", role: "adult" }];
         memberMap = new Map(members.map(member => [member.id, member]));
@@ -291,14 +302,15 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
       // Closed polls are excluded on purpose: their ballots are unsealed, so
       // the results view counts them directly and a second number could
       // disagree with it (spoiled ballots hold a receipt but are not counted).
-      const open = polls.filter(poll => poll.status !== "closed").slice(0, TURNOUT_PRELOAD);
+      // An ended poll is skipped too: its result is read whole when opened.
+      const open = polls.filter(poll => !votingOver(poll)).slice(0, TURNOUT_PRELOAD);
       await Promise.all(open.map(poll => fetchTurnout(poll.id)));
     }
 
     /** Turnout for a poll opened past the preload cap; repaints if it lands. */
     async function ensureTurnout(pollId) {
       const poll = polls.find(item => item.id === pollId);
-      if (!poll || poll.status === "closed" || turnout.has(pollId)) return;
+      if (!poll || votingOver(poll) || turnout.has(pollId)) return;
       await fetchTurnout(pollId);
       if (selectedPollId === pollId) render();
     }
@@ -319,22 +331,103 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
       return memberMap.get(poll.created_by)?.name ?? "Adult";
     }
 
-    // render() rewrites the whole view, so put the caret back after typing.
+    /** Time ran out but no adult has closed it yet. */
+    function ended(poll) { return pollEnded(poll, new Date()); }
+
+    /** Voting is over, by close or by clock. */
+    function votingOver(poll) { return poll.status === "closed" || ended(poll); }
+
+    /**
+     * "Closes in 42 min" (or "Time's up") as a span the countdown tick can
+     * refresh in place — `data-countdown` carries the instant, so the tick
+     * recomputes the text without a full repaint. Empty for an untimed poll.
+     */
+    function countdownHtml(poll) {
+      const label = countdownLabel(poll.closes_at, new Date());
+      if (!label) return "";
+      return `<span class="countdown ${countdownUrgent(poll.closes_at, new Date()) ? "urgent" : ""}" data-countdown="${esc(poll.closes_at)}" data-testid="countdown">${esc(label)}</span>`;
+    }
+
+    /** Ballots readable now — closed, or `results_at` has passed (the hub's seal). */
+    function released(poll) { return resultsReleased(poll, new Date()); }
+
+    /** Results showing while votes are still being taken. */
+    function isLive(poll) { return !votingOver(poll) && released(poll); }
+
+    /**
+     * Every half minute: refresh each countdown in place, and when a poll has
+     * just crossed its deadline re-read and repaint once — its options
+     * disable, its badge changes, and its ballots (now unsealed by the row
+     * policy) come in with the reload. A LIVE poll on screen is re-read on the
+     * same tick so the tally follows other members' votes. In-place text
+     * updates keep the search box's caret where it was; only a crossing or a
+     * live poll in view repaints.
+     */
+    let ticking = false;
+    async function tickCountdowns() {
+      const now = new Date();
+      document.querySelectorAll("[data-countdown]").forEach(element => {
+        element.textContent = countdownLabel(element.dataset.countdown, now);
+        element.classList.toggle("urgent", countdownUrgent(element.dataset.countdown, now));
+      });
+      const endedNow = new Set(polls.filter(poll => pollEnded(poll, now)).map(poll => poll.id));
+      const crossed = [...endedNow].filter(id => !endedSeen.has(id));
+      const selected = polls.find(poll => poll.id === selectedPollId);
+      const liveInView = Boolean(selected) && isLive(selected);
+      if (!crossed.length && !liveInView) return;
+      // A tick that finds the previous one still reading leaves `endedSeen`
+      // alone, so a crossing it could not act on is picked up by the next.
+      if (ticking) return;
+      ticking = true;
+      try {
+        // A crossing re-reads everything (the newly unsealed poll may not be
+        // the one on screen); a live poll in view re-reads only its own
+        // ballots — two bounded reads, not the four-table load plus turnout.
+        if (crossed.length) await loadData();
+        else await refreshBallots(selected.id);
+        // Marked seen only once the read landed: a crossing that hit a
+        // transient failure is retried by the next tick, not forgotten.
+        endedSeen = endedNow;
+      } catch { /* keep what is on screen */ }
+      ticking = false;
+      render();
+    }
+
+    /** Replace one poll's ballots with a fresh read; everything else stays. */
+    async function refreshBallots(pollId) {
+      if (!DB) return;
+      const [voteResult, guestResult] = await Promise.all([
+        db(`SELECT poll_id, member_id, option_id, created_at FROM app_family_polls__poll_votes WHERE poll_id = ? ORDER BY created_at LIMIT ${VOTE_LIMIT}`, [pollId]),
+        db(`SELECT poll_id, option_id FROM app_family_polls__guest_votes WHERE poll_id = ? ORDER BY created_at LIMIT ${GUEST_VOTE_LIMIT}`, [pollId]),
+      ]);
+      votes = [...votes.filter(vote => vote.poll_id !== pollId), ...(voteResult.rows ?? [])];
+      guestVotes = [...guestVotes.filter(vote => vote.poll_id !== pollId), ...(guestResult.rows ?? [])];
+    }
+
     document.addEventListener("input", (e) => {
       if (e.target.id !== "search") return;
       searchQ = e.target.value;
-      const caret = e.target.selectionStart;
       render();
-      const next = document.getElementById("search");
-      if (next) { next.focus(); next.setSelectionRange(caret, caret); }
     });
 
+    /**
+     * Rewrites the whole view. If the search box had focus — the member is
+     * typing, or a countdown tick repainted under them — the new one gets the
+     * focus and caret back, so neither a keystroke nor a crossing poll
+     * interrupts the search.
+     */
     function render() {
       errorMessage = errorMessage || "";
       const app = document.getElementById("app");
       const poll = polls.find(item => item.id === selectedPollId);
+      const search = document.activeElement?.id === "search" ? document.activeElement : null;
+      const caret = search?.selectionStart ?? null;
       app.innerHTML = poll ? detailHtml(poll) : listHtml();
       bindActions();
+      if (search) {
+        const next = document.getElementById("search");
+        if (next) { next.focus(); if (caret !== null) next.setSelectionRange(caret, caret); }
+      }
     }
 
     /** Whether this poll records no voter at all. */
@@ -357,22 +450,27 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
      * names nobody.
      */
     function turnoutText(poll) {
-      if (poll.status === "closed") return "";
+      // Nothing once the tally itself is showing — the numbers say it better.
+      if (votingOver(poll) || released(poll)) return "";
       return turnout.has(poll.id) ? turnoutLabel(turnout.get(poll.id)) : "";
     }
 
-    function pollCard(poll, index) {
+    function pollCard(poll) {
       const closed = poll.status === "closed";
+      const isEnded = ended(poll);
       const turnoutSuffix = turnoutText(poll) ? ` · ${turnoutText(poll)}` : "";
+      const countdown = countdownHtml(poll);
+      const countdownSuffix = countdown && !isEnded ? ` · ${countdown}` : "";
       const badge = closed
         ? '<span class="badge" data-testid="poll-badge">Closed</span>'
+        : isEnded ? '<span class="badge badge-ended" data-testid="poll-badge">Time\'s up</span>'
         : hasVoted(poll) ? '<span class="badge badge-voted" data-testid="poll-badge">Voted ✓</span>' : '<span class="badge" data-testid="poll-badge">Open</span>';
       return `
-        <article class="card poll-card" data-testid="poll-card" data-poll-id="${poll.id}" data-poll-status="${esc(poll.status)}" data-open-poll="${index}">
+        <article class="card poll-card" data-testid="poll-card" data-poll-id="${esc(poll.id)}" data-poll-status="${esc(poll.status)}" data-poll-ended="${isEnded ? "1" : "0"}" data-open-poll="${esc(poll.id)}">
           <div class="row">
             <div>
               <h2 data-testid="poll-question">${esc(poll.question)}</h2>
-              <div class="muted" data-testid="poll-meta">Created by ${esc(creatorName(poll))} · ${pollOptions(poll).length} choices${isAnonymous(poll) ? " · anonymous" : ""}${turnoutSuffix}</div>
+              <div class="muted" data-testid="poll-meta">Created by ${esc(creatorName(poll))} · ${pollOptions(poll).length} choices${isAnonymous(poll) ? " · anonymous" : ""}${isLive(poll) ? " · live results" : ""}${turnoutSuffix}${countdownSuffix}</div>
             </div>
             ${badge}
           </div>
@@ -380,15 +478,15 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
     }
 
     function listHtml() {
-      // pollCard takes the index into `polls`, so filter on a matching test
-      // rather than on a reindexed copy.
       const shows = (poll) => !searchQ || searchMatch(
-        searchQ, searchableFields(poll, parseOptions(poll).map(o => o.label).join(" ")));
-      const openCards = polls
-        .map((poll, index) => (poll.status === "closed" || !shows(poll) ? "" : pollCard(poll, index)))
+        searchQ, searchableFields(poll, parseOptions(poll.options_json).map(o => o.text).join(" ")));
+      // Timed polls float to the top, soonest first; polls whose time is up
+      // lead, since their result is in and an adult still has to close them.
+      const openCards = sortOpenPolls(polls.filter(poll => poll.status !== "closed"), new Date())
+        .map((poll) => (shows(poll) ? pollCard(poll) : ""))
         .join("");
       const closedCards = polls
-        .map((poll, index) => (poll.status === "closed" && shows(poll) ? pollCard(poll, index) : ""))
+        .map((poll) => (poll.status === "closed" && shows(poll) ? pollCard(poll) : ""))
         .join("");
 
       return `
@@ -404,17 +502,26 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
 
     function detailHtml(poll) {
       const options = pollOptions(poll);
-      const allVotes = votesFor(poll.id);
       const anonymous = isAnonymous(poll);
+      const isEnded = ended(poll);
+      const closed = poll.status === "closed";
+      // Whether the tally shows is the row policy's answer, not the view's:
+      // the rows are unsealed when the poll is closed OR its `results_at` has
+      // passed, and the preload/reload returns exactly what is readable. So a
+      // timed poll's ballots (guest ones included) arrive the moment it ends,
+      // and a live poll's from the start. Before that the reads return only
+      // the member's own ballot, which the view never counts as a result.
+      const resultsShown = released(poll);
+      const live = isLive(poll);
+      const allVotes = votesFor(poll.id);
       // An anonymous poll shows no per-member selection, because there is none
       // to show; `mine` stays null and the ✓ moves to the badge.
       const mine = anonymous ? null : selectedOptionId(allVotes, me?.id);
       const voted = hasVoted(poll);
-      const closed = poll.status === "closed";
       // Ballots naming an option that is not on this poll are excluded from
       // both the counts and the total, so the percentages always add up.
       const pollVotes = countedVotes(options, allVotes);
-      const allGuestVotes = guestVotesFor(poll.id);
+      const allGuestVotes = resultsShown ? guestVotesFor(poll.id) : [];
       const guestBallots = countedVotes(options, allGuestVotes);
       const spoiled = spoiledVotes(options, [...allVotes, ...allGuestVotes]);
       // Guests count, and are also counted separately: the result is the sum,
@@ -427,16 +534,16 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
       const optionsHtml = options.map((option, index) => {
         const count = counts[option.id] ?? 0;
         const pct = total ? Math.round(count / total * 100) : 0;
-        const fromLink = closed ? guestVoteLabel(guestCounts[option.id] ?? 0) : "";
+        const fromLink = resultsShown ? guestVoteLabel(guestCounts[option.id] ?? 0) : "";
         return `
-          <button class="option ${mine === option.id ? "selected" : ""} ${closed && winners.has(option.id) ? "winner" : ""}"
+          <button class="option ${mine === option.id ? "selected" : ""} ${resultsShown && winners.has(option.id) ? "winner" : ""}"
                   data-testid="vote-option" data-option-id="${option.id}"
-                  data-vote-option="${index}" ${closed || voted || !me ? "disabled" : ""}>
+                  data-vote-option="${index}" ${closed || isEnded || voted || !me ? "disabled" : ""}>
             <span class="option-line">
               <span data-testid="option-text">${esc(option.text)}${mine === option.id ? ` <span data-testid="option-selected-mark">✓</span>` : ""}</span>
-              ${closed ? `<strong data-testid="option-count">${count}</strong>` : ""}
+              ${resultsShown ? `<strong data-testid="option-count">${count}</strong>` : ""}
             </span>
-            ${closed ? `<span class="bar" data-testid="option-bar"><div style="width:${pct}%"></div></span>` : ""}
+            ${resultsShown ? `<span class="bar" data-testid="option-bar"><div style="width:${pct}%"></div></span>` : ""}
             ${fromLink ? `<span class="muted option-guest" data-testid="option-guest">${esc(fromLink)}</span>` : ""}
           </button>`;
       }).join("");
@@ -457,17 +564,53 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
       const turnoutSentence = turnoutText(poll) ? `${turnoutText(poll)}. ` : "";
       // Provenance belongs in the headline number too, not only under the bars:
       // a result that is mostly link traffic reads very differently.
-      const guestSentence = closed && guestBallots.length > 0
+      const guestSentence = resultsShown && guestBallots.length > 0
         ? `${guestBallots.length} of them came from a shared link, where anyone with the link could vote. `
         : "";
+      // On a timed poll the deadline leads: it is the one fact a dinner poll is
+      // about. The countdown span refreshes in place between repaints.
+      const countdown = countdownHtml(poll);
+      const countdownSentence = countdown && !isEnded ? `${countdown}. ` : "";
+      const votesCounted = `${total} vote${total === 1 ? "" : "s"} counted.`;
+      // Live copy says what live means for privacy: on an attributed poll each
+      // ballot shows with its voter as it lands; on an anonymous one only the
+      // count moves — though in a small household a count that ticks up as
+      // someone taps is its own kind of tell, so the copy says that too.
+      const livePrivacy = anonymous
+        ? "Votes are anonymous — only the count updates as each one lands."
+        : "Everyone can see how each member voted, as they vote.";
+      // Time's up: voting is over by the hub's clock and the rows are open;
+      // only an adult's close makes it final (and frozen).
+      const endedNotice = `<div class="notice" data-testid="poll-notice">Time's up — ${votesCounted} ${guestSentence}${
+        anonymous ? "Votes were anonymous. " : ""}${canSteward(me) ? "Close the poll to make the result final." : ""}</div>`;
       const notice = (closed
-        ? `<div class="notice" data-testid="poll-notice">This poll is closed. ${total} vote${total === 1 ? "" : "s"} counted. ${guestSentence}${anonymous ? "Votes were anonymous." : ""}</div>`
-        : voted
-          ? `<div class="notice" data-testid="poll-notice">${turnoutSentence}Your vote is final. Results are revealed when the poll closes. ${privacyLine}</div>`
-          : `<div class="notice" data-testid="poll-notice">${turnoutSentence}Choose one option. Your vote cannot be changed after submission. ${privacyLine}</div>`) + spoiledLine;
+        ? `<div class="notice" data-testid="poll-notice">This poll is closed. ${votesCounted} ${guestSentence}${anonymous ? "Votes were anonymous." : ""}</div>`
+        : isEnded
+          ? endedNotice
+          : live
+            ? `<div class="notice" data-testid="poll-notice">${countdownSentence}Results update live — ${votesCounted} ${guestSentence}${
+                voted ? "Your vote is final. " : "Choose one option; your vote cannot be changed. "}${livePrivacy}</div>`
+            : voted
+              ? `<div class="notice" data-testid="poll-notice">${countdownSentence}${turnoutSentence}Your vote is final. Results are revealed when the poll closes. ${privacyLine}</div>`
+              : `<div class="notice" data-testid="poll-notice">${countdownSentence}${turnoutSentence}Choose one option. Your vote cannot be changed after submission. ${privacyLine}</div>`) + spoiledLine;
+
+      const badge = closed
+        ? '<span class="badge" data-testid="poll-badge">Closed</span>'
+        : isEnded ? '<span class="badge badge-ended" data-testid="poll-badge">Time\'s up</span>'
+        : voted ? '<span class="badge badge-voted" data-testid="poll-badge">Voted ✓</span>'
+        : '<span class="badge" data-testid="poll-badge">Open</span>';
+      // Steward actions. Sharing is offered only while votes are still being
+      // taken; a link on an ended poll would invite ballots that only count if
+      // someone closes the poll. "Ask again" reopens the create form prefilled
+      // — the dinner poll is the same every night, only the deadline is new.
+      const stewardActions = canSteward(me) ? `<div class="actions">
+              ${(closed || isEnded) ? '<button class="btn" id="ask-again" data-testid="ask-again">Ask again</button>' : ""}
+              ${!votingOver(poll) && share.enabled ? '<button class="btn" id="share-poll" data-testid="share-poll">🔗 Share</button>' : ""}
+              ${!closed ? `<button class="btn" id="close-poll" data-testid="close-poll">${isEnded ? "Close poll &amp; finalize" : "Close poll &amp; reveal results"}</button>` : ""}
+            </div>` : "";
 
       return `
-        <div data-testid="poll-detail" data-poll-id="${poll.id}" data-poll-status="${esc(poll.status)}" data-poll-anonymous="${anonymous ? "1" : "0"}">
+        <div data-testid="poll-detail" data-poll-id="${esc(poll.id)}" data-poll-status="${esc(poll.status)}" data-poll-ended="${isEnded ? "1" : "0"}" data-poll-anonymous="${anonymous ? "1" : "0"}">
         <button class="back" id="back" data-testid="back">← All polls</button>
         ${errorMessage ? `<div class="error" data-testid="error">${esc(errorMessage)}</div>` : ""}
         <section class="card">
@@ -476,15 +619,12 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
               <h1 data-testid="poll-question">${esc(poll.question)}</h1>
               <div class="muted">Created by ${esc(creatorName(poll))}</div>
             </div>
-            ${closed ? '<span class="badge" data-testid="poll-badge">Closed</span>' : voted ? '<span class="badge badge-voted" data-testid="poll-badge">Voted ✓</span>' : '<span class="badge" data-testid="poll-badge">Open</span>'}
+            ${badge}
           </div>
           <div class="card-body">
             ${notice}
             ${optionsHtml}
-            ${!closed && canSteward(me) ? `<div class="actions">
-              ${share.enabled ? '<button class="btn" id="share-poll" data-testid="share-poll">🔗 Share</button>' : ""}
-              <button class="btn" id="close-poll" data-testid="close-poll">Close poll &amp; reveal results</button>
-            </div>` : ""}
+            ${stewardActions}
           </div>
         </section>
         </div>`;
@@ -499,7 +639,8 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
       });
       document.querySelectorAll("[data-open-poll]").forEach(element => {
         element.addEventListener("click", () => {
-          selectedPollId = polls[Number(element.dataset.openPoll)]?.id ?? null;
+          const id = element.dataset.openPoll;
+          selectedPollId = polls.some(poll => poll.id === id) ? id : null;
           errorMessage = "";
           render();
           if (selectedPollId) ensureTurnout(selectedPollId);
@@ -510,6 +651,16 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
       });
       document.getElementById("close-poll")?.addEventListener("click", closePoll);
       document.getElementById("share-poll")?.addEventListener("click", () => openShareModal(selectedPollId));
+      document.getElementById("ask-again")?.addEventListener("click", () => {
+        const poll = polls.find(item => item.id === selectedPollId);
+        if (poll) openCreateModal({
+          question: poll.question,
+          choices: pollOptions(poll).map(option => option.text),
+          anonymous: isAnonymous(poll),
+          // Live was "results from creation"; carry the mode, never the deadline.
+          live: Boolean(poll.results_at) && poll.results_at <= poll.created_at,
+        });
+      });
     }
 
     // --- Share links ---------------------------------------------------------
@@ -545,7 +696,9 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
 
     async function openShareModal(pollId) {
       const poll = polls.find(item => item.id === pollId);
-      if (!poll || poll.status === "closed" || !canSteward(me)) return;
+      // Not after time is up either: a link minted then would invite ballots
+      // that only count if someone later closes the poll.
+      if (!poll || votingOver(poll) || !canSteward(me)) return;
       try {
         await ensureOptionRows(poll);
       } catch (error) {
@@ -669,10 +822,13 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
       // household. It was one unconfirmed click.
       const confirmed = await hubConfirm({
         message: `Close "${poll.question}"?`,
-        description: (isAnonymous(poll)
-          ? "Voting ends and the results are revealed to everyone. No record of who voted is kept."
-          : "Voting ends and every vote — including who cast it — is revealed to everyone in the household.")
-          + (share.enabled ? " Any share link for this poll stops working." : "")
+        description: (ended(poll)
+          ? "Voting already ended when time ran out. Closing makes the result final"
+            + (share.enabled ? " and stops any share link working." : ".")
+          : (isAnonymous(poll)
+            ? "Voting ends and the results are revealed to everyone. No record of who voted is kept."
+            : "Voting ends and every vote — including who cast it — is revealed to everyone in the household.")
+            + (share.enabled ? " Any share link for this poll stops working." : ""))
           + " This can't be undone.",
         confirmLabel: "Close poll",
         destructive: true,
@@ -691,26 +847,65 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
       render();
     }
 
-    function openCreateModal() {
+    /**
+     * The create form. `prefill` ("Ask again" on a finished poll) seeds the
+     * question, choices and anonymity; the deadline is never copied — the whole
+     * point of asking again is a fresh one.
+     */
+    function openCreateModal(prefill = null) {
       if (!canSteward(me)) return;
       closeModal();
+      const choices = Array.isArray(prefill?.choices) && prefill.choices.length >= 2 ? prefill.choices.slice(0, 10) : ["", ""];
+      const choiceInputs = choices.map((text, index) =>
+        `<div class="option-input"><input maxlength="160" data-testid="field-choice" data-choice-index="${index}" placeholder="Choice ${index + 1}" value="${esc(text)}"></div>`).join("");
       modal = document.createElement("div");
       modal.className = "modal-backdrop";
       modal.innerHTML = `
         <div class="modal" data-testid="poll-create-modal">
           <h2>Create a poll</h2>
-          <div class="field"><label>Question</label><textarea id="poll-question" data-testid="field-question" rows="2" maxlength="300"></textarea></div>
+          <div class="field"><label>Question</label><textarea id="poll-question" data-testid="field-question" rows="2" maxlength="300">${esc(prefill?.question ?? "")}</textarea></div>
           <div class="field">
             <label>Choices</label>
-            <div id="choice-list">
-              <div class="option-input"><input maxlength="160" data-testid="field-choice" data-choice-index="0" placeholder="Choice 1"></div>
-              <div class="option-input"><input maxlength="160" data-testid="field-choice" data-choice-index="1" placeholder="Choice 2"></div>
-            </div>
+            <div id="choice-list">${choiceInputs}</div>
             <button class="btn" id="add-choice" data-testid="add-choice" style="margin-top:8px">+ Add choice</button>
           </div>
           <div class="field">
+            <label for="poll-closes">Closes</label>
+            <select id="poll-closes" data-testid="field-closes" class="search-input">
+              <option value="">When an adult closes it</option>
+              <option value="30">In 30 minutes</option>
+              <option value="60">In 1 hour</option>
+              <option value="180">In 3 hours</option>
+              <option value="eod">End of today</option>
+              <option value="custom">Pick a time…</option>
+            </select>
+            <input type="datetime-local" id="poll-closes-at" data-testid="field-closes-at" class="search-input" style="margin-top:8px" hidden>
+            <div class="muted" style="margin-top:4px">
+              A timed poll stops taking votes when time runs out and shows the result right away.
+              Closing it afterwards makes the result final.
+            </div>
+          </div>
+          <div class="field">
+            <label>Results</label>
             <label style="display:flex;align-items:center;gap:8px;font-weight:500">
-              <input type="checkbox" id="poll-anonymous" data-testid="field-anonymous">
+              <input type="radio" name="poll-results" value="at_close" data-testid="field-results-at-close" ${prefill?.live ? "" : "checked"}>
+              Revealed when the poll closes
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-weight:500;margin-top:6px">
+              <input type="radio" name="poll-results" value="live" data-testid="field-results-live" ${prefill?.live ? "checked" : ""}>
+              Live — shown as votes come in
+            </label>
+          </div>
+          <div class="field">
+            <label style="display:flex;align-items:center;gap:8px;font-weight:500">
+              <input type="checkbox" id="poll-notify" data-testid="field-notify" checked>
+              Notify everyone now
+            </label>
+            <div class="muted" style="margin-top:4px">Sends a notification to the household so people see the poll in time to vote.</div>
+          </div>
+          <div class="field">
+            <label style="display:flex;align-items:center;gap:8px;font-weight:500">
+              <input type="checkbox" id="poll-anonymous" data-testid="field-anonymous" ${prefill?.anonymous ? "checked" : ""}>
               Anonymous poll
             </label>
             <div class="muted" style="margin-top:4px">
@@ -730,6 +925,19 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
       modal.querySelector("#cancel-create").addEventListener("click", closeModal);
       modal.querySelector("#add-choice").addEventListener("click", addChoiceInput);
       modal.querySelector("#save-poll").addEventListener("click", createPoll);
+      // The time picker appears only for "Pick a time…", seeded an hour out so
+      // the first tap lands on something sensible.
+      modal.querySelector("#poll-closes").addEventListener("change", (event) => {
+        const picker = modal.querySelector("#poll-closes-at");
+        picker.hidden = event.target.value !== "custom";
+        if (!picker.hidden && !picker.value) {
+          const inAnHour = new Date(Date.now() + 60 * 60_000);
+          inAnHour.setSeconds(0, 0);
+          const pad = (n) => String(n).padStart(2, "0");
+          picker.value = `${inAnHour.getFullYear()}-${pad(inAnHour.getMonth() + 1)}-${pad(inAnHour.getDate())}T${pad(inAnHour.getHours())}:${pad(inAnHour.getMinutes())}`;
+          picker.focus();
+        }
+      });
       modal.querySelector("#poll-question").focus();
     }
 
@@ -769,6 +977,17 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
         return;
       }
 
+      // The deadline, as a UTC instant, or null for "until an adult closes it".
+      // A chosen-but-unparseable or already-past time is refused here rather
+      // than saved: the hub would reject every vote on it from the first second.
+      const closesChoice = modal.querySelector("#poll-closes").value;
+      const closesAt = closesAtFromChoice(closesChoice, new Date(), modal.querySelector("#poll-closes-at").value);
+      if (closesChoice && (!closesAt || deadlinePassed(closesAt))) {
+        modalError.hidden = false;
+        modalError.textContent = "Pick a closing time in the future.";
+        return;
+      }
+
       const button = modal.querySelector("#save-poll");
       button.disabled = true;
       const id = crypto.randomUUID();
@@ -777,13 +996,18 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
       // Fixed at creation: the flag decides whether each ballot records a voter,
       // so flipping it later could only ever mislead about ballots already cast.
       const anonymous = modal.querySelector("#poll-anonymous").checked ? 1 : 0;
+      // When the ballot rows unseal (see resultsAtFor). Also fixed at creation:
+      // it is a promise made to voters about what others will see, and when.
+      const resultsMode = modal.querySelector('input[name="poll-results"]:checked')?.value ?? "at_close";
+      const resultsAt = resultsAtFor(resultsMode, createdAt, closesAt);
+      const notify = modal.querySelector("#poll-notify").checked;
 
       try {
         await db(
           `INSERT INTO app_family_polls__polls
-             (id, question, options_json, status, created_by, created_at, anonymous)
-           VALUES (?, ?, ?, 'open', ?, ?, ?)`,
-          [id, question, JSON.stringify(options), me.id, createdAt, anonymous],
+             (id, question, options_json, status, created_by, created_at, anonymous, closes_at, results_at)
+           VALUES (?, ?, ?, 'open', ?, ?, ?, ?, ?)`,
+          [id, question, JSON.stringify(options), me.id, createdAt, anonymous, closesAt, resultsAt],
         );
         polls.unshift({
           id,
@@ -793,6 +1017,8 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
           created_by: me.id,
           created_at: createdAt,
           anonymous,
+          closes_at: closesAt,
+          results_at: resultsAt,
         });
         closeModal();
         selectedPollId = id;
@@ -807,6 +1033,24 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
             payload: { poll_id: id, question },
           }),
         }).catch(() => {});
+        // The notification carries the deadline, because that is what makes a
+        // quick poll urgent. `body` names no voter and nothing anyone has said,
+        // so it is safe to send as-is to everyone. Best effort: a failed send
+        // must not undo a created poll.
+        if (notify) {
+          const when = closesAt ? ` ${countdownLabel(closesAt, new Date())}.` : "";
+          fetch(NOTIFY, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              title: `New poll from ${me.name ?? "an adult"}`,
+              body: `${question}${when}`,
+              url: `/run/${APP_ID}?pollId=${encodeURIComponent(id)}`,
+              audience: "all",
+              idempotency_key: `family-polls:created:${id}`,
+            }),
+          }).catch(() => {});
+        }
       } catch (error) {
         button.disabled = false;
         modalError.hidden = false;
@@ -841,8 +1085,18 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
         // anyone who voted while this poll was on screen. A failed refetch
         // leaves the local increment standing rather than reverting it.
         if (turnout.has(poll.id)) turnout.set(poll.id, turnout.get(poll.id) + 1);
-        await fetchTurnout(poll.id);
-        if (!isAnonymous(poll)) {
+        if (released(poll)) {
+          // The tally is showing, so re-read it: that brings in this ballot
+          // (an anonymous one has no member id to reflect locally) and anyone
+          // else's since the page loaded.
+          try { await loadData(); } catch { /* the local increment below still counts it */ }
+          // loadData rebuilt the receipt set from a bounded read; this poll's
+          // receipt is certain (the hub just wrote it), so put it back.
+          myReceipts.add(poll.id);
+        } else {
+          await fetchTurnout(poll.id);
+        }
+        if (!isAnonymous(poll) && !votes.some(vote => vote.poll_id === poll.id && vote.member_id === me.id)) {
           votes.push({
             poll_id: poll.id,
             member_id: me.id,
@@ -859,7 +1113,9 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
     (async () => {
       try {
         await Promise.all([loadContext(), loadData()]);
+        endedSeen = new Set(polls.filter(poll => ended(poll)).map(poll => poll.id));
         render();
+        setInterval(tickCountdowns, COUNTDOWN_TICK_MS);
         const deepLink = new URLSearchParams(location.search).get("pollId");
         if (deepLink && polls.some(poll => poll.id === deepLink)) {
           selectedPollId = deepLink;
