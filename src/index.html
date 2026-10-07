@@ -93,6 +93,7 @@
     .bar { height: 6px; background: var(--hub-tint-info, #e2e8f0); border-radius: 999px; margin-top: 8px; overflow: hidden; }
     .bar > div { height: 100%; background: var(--green); }
     .empty { padding: 48px 18px; text-align: center; color: var(--muted); }
+    .empty p { margin: 12px 0 0; }
     .back { border: 0; background: transparent; color: var(--muted); padding: 0; margin-bottom: 12px; }
     .notice, .error {
       padding: 10px 12px;
@@ -151,7 +152,7 @@
   <main class="app" id="app"><div class="empty">Loading polls…</div></main>
 
   <script type="module">
-    import { esc, isAdult, hubConfirm, hubAlert, createShareHelper, searchMatch, activeShareLinks } from "/hub-sdk.js";
+    import { esc, isAdult, hubConfirm, hubAlert, createShareHelper, searchMatch, activeShareLinks, glyph, chickadee } from "/hub-sdk.js";
     import { parseOptions, selectedOptionId, voteCounts, winningOptionIds, spoiledVotes, countedVotes, searchableFields, turnoutLabel, missingOptionRows, guestVoteLabel, pollEnded, countdownLabel, countdownUrgent, closesAtFromChoice, deadlinePassed, sortOpenPolls, resultsReleased, resultsAtFor } from "./logic.js";
 
     const DB = window.__DB_URL ?? "";
@@ -464,7 +465,7 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
       const badge = closed
         ? '<span class="badge" data-testid="poll-badge">Closed</span>'
         : isEnded ? '<span class="badge badge-ended" data-testid="poll-badge">Time\'s up</span>'
-        : hasVoted(poll) ? '<span class="badge badge-voted" data-testid="poll-badge">Voted ✓</span>' : '<span class="badge" data-testid="poll-badge">Open</span>';
+        : hasVoted(poll) ? `<span class="badge badge-voted" data-testid="poll-badge">Voted ${glyph("tick")}</span>` : '<span class="badge" data-testid="poll-badge">Open</span>';
       return `
         <article class="card poll-card" data-testid="poll-card" data-poll-id="${esc(poll.id)}" data-poll-status="${esc(poll.status)}" data-poll-ended="${isEnded ? "1" : "0"}" data-open-poll="${esc(poll.id)}">
           <div class="row">
@@ -491,12 +492,12 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
 
       return `
         <header class="header">
-          <div><h1>🗳️ Polls</h1><div class="muted">One final vote per member · results revealed when the poll closes</div></div>
+          <div><h1>${glyph("ballot-box")} Polls</h1><div class="muted">One final vote per member · results revealed when the poll closes</div></div>
           ${canSteward(me) ? '<button class="btn btn-primary" id="new-poll" data-testid="new-poll">+ New Poll</button>' : ""}
         </header>
         ${errorMessage ? `<div class="error" data-testid="error">${esc(errorMessage)}</div>` : ""}
         ${polls.length ? `<div class="search-row"><input id="search" data-testid="search" class="search-input" type="search" placeholder="Search polls…" aria-label="Search polls" value="${esc(searchQ)}" /></div>` : ""}
-        <div data-testid="open-polls">${openCards || (searchQ ? `<div class="card empty" data-testid="empty-state">No open polls match "${esc(searchQ)}".</div>` : '<div class="card empty" data-testid="empty-state">No open polls yet.</div>')}</div>
+        <div data-testid="open-polls">${openCards || (searchQ ? `<div class="card empty" data-testid="empty-state">${chickadee("searching")}<p>No open polls match "${esc(searchQ)}".</p></div>` : `<div class="card empty" data-testid="empty-state">${chickadee("nest")}<p>No open polls yet.</p></div>`)}</div>
         ${closedCards ? `<h2 style="margin:18px 0 10px">Closed polls</h2><div data-testid="closed-polls">${closedCards}</div>` : ""}`;
     }
 
@@ -540,7 +541,7 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
                   data-testid="vote-option" data-option-id="${option.id}"
                   data-vote-option="${index}" ${closed || isEnded || voted || !me ? "disabled" : ""}>
             <span class="option-line">
-              <span data-testid="option-text">${esc(option.text)}${mine === option.id ? ` <span data-testid="option-selected-mark">✓</span>` : ""}</span>
+              <span data-testid="option-text">${esc(option.text)}${mine === option.id ? ` <span data-testid="option-selected-mark">${glyph("tick", { title: "Your vote" })}</span>` : ""}</span>
               ${resultsShown ? `<strong data-testid="option-count">${count}</strong>` : ""}
             </span>
             ${resultsShown ? `<span class="bar" data-testid="option-bar"><div style="width:${pct}%"></div></span>` : ""}
@@ -597,7 +598,7 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
       const badge = closed
         ? '<span class="badge" data-testid="poll-badge">Closed</span>'
         : isEnded ? '<span class="badge badge-ended" data-testid="poll-badge">Time\'s up</span>'
-        : voted ? '<span class="badge badge-voted" data-testid="poll-badge">Voted ✓</span>'
+        : voted ? `<span class="badge badge-voted" data-testid="poll-badge">Voted ${glyph("tick")}</span>`
         : '<span class="badge" data-testid="poll-badge">Open</span>';
       // Steward actions. Sharing is offered only while votes are still being
       // taken; a link on an ended poll would invite ballots that only count if
@@ -605,7 +606,7 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
       // — the dinner poll is the same every night, only the deadline is new.
       const stewardActions = canSteward(me) ? `<div class="actions">
               ${(closed || isEnded) ? '<button class="btn" id="ask-again" data-testid="ask-again">Ask again</button>' : ""}
-              ${!votingOver(poll) && share.enabled ? '<button class="btn" id="share-poll" data-testid="share-poll">🔗 Share</button>' : ""}
+              ${!votingOver(poll) && share.enabled ? `<button class="btn" id="share-poll" data-testid="share-poll">${glyph("link")} Share</button>` : ""}
               ${!closed ? `<button class="btn" id="close-poll" data-testid="close-poll">${isEnded ? "Close poll &amp; finalize" : "Close poll &amp; reveal results"}</button>` : ""}
             </div>` : "";
 
@@ -717,7 +718,7 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
             <div class="tiny muted" style="margin-top:3px">
               Expires ${new Date(link.expiresAt).toLocaleDateString()} · ${link.viewCount} view${link.viewCount === 1 ? "" : "s"}${
                 link.writable ? ` · ${link.submissionCount} guest vote${link.submissionCount === 1 ? "" : "s"}` : " · read-only"}${
-                link.hasPassword ? " · 🔒 password" : ""}
+                link.hasPassword ? ` · ${glyph("lock")} password` : ""}
             </div>
           </div>
           <button class="btn" data-share-copy="${esc(link.id)}">Copy</button>

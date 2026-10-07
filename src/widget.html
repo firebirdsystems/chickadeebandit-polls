@@ -44,7 +44,7 @@
 <body>
   <div id="root"><div class="empty">Loading…</div></div>
   <script type="module">
-    import { esc } from "/hub-sdk.js";
+    import { esc, glyph, chickadee } from "/hub-sdk.js";
     import { parseOptions, sortOpenPolls, pollEnded, countdownLabel, countdownUrgent } from "./logic.js";
 
     const DB = window.__DB_URL ?? "";
@@ -94,13 +94,13 @@
                   <span class="question">${esc(poll.question)}</span>
                   <span class="meta ${countdownUrgent(poll.closes_at, now) && !isEnded ? "urgent" : ""}">${parseOptions(poll.options_json).length} choices${countdown && !isEnded ? ` · ${esc(countdown)}` : ""}</span>
                 </span>
-                ${isEnded ? '<span class="badge ended">Time\'s up</span>' : voted ? '<span class="badge">Voted ✓</span>' : ""}
+                ${isEnded ? '<span class="badge ended">Time\'s up</span>' : voted ? `<span class="badge">Voted ${glyph("tick")}</span>` : ""}
               </a>`;
           }).join("")
-        : '<div class="empty">No open polls</div>';
+        : `<div class="empty">${chickadee("sleeping", { size: 64 })}<div>No open polls</div></div>`;
 
       document.getElementById("root").innerHTML = `
-        <div class="head"><strong>🗳️ Polls</strong></div>
+        <div class="head"><strong>${glyph("ballot-box")} Polls</strong></div>
         <div class="list">${rows}</div>
         <div class="foot"><a href="/run/${APP_ID}">Open polls →</a></div>`;
     }
