@@ -305,7 +305,20 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
       // disagree with it (spoiled ballots hold a receipt but are not counted).
       // An ended poll is skipped too: its result is read whole when opened.
       const open = polls.filter(poll => !votingOver(poll)).slice(0, TURNOUT_PRELOAD);
-      await Promise.all(open.map(poll => fetchTurnout(poll.id)));
+      if (!RESPONSE_PROGRESS || !open.length) return;
+      // One request for the whole list. A poll the hub leaves out of
+      // `sessions` stays out of the map: unknown, not zero.
+      try {
+        const query = open.map(poll => `session_ids=${encodeURIComponent(poll.id)}`).join("&");
+        const response = await fetch(`${RESPONSE_PROGRESS}?${query}`);
+        if (!response.ok) return;
+        const body = await response.json();
+        for (const [pollId, progress] of Object.entries(body.sessions ?? {})) {
+          const responded = Number(progress.responded);
+          if (Number.isFinite(responded)) turnout.set(pollId, responded);
+          if (progress.you_responded) myReceipts.add(pollId);
+        }
+      } catch { /* leave the counts unknown rather than wrong */ }
     }
 
     /** Turnout for a poll opened past the preload cap; repaints if it lands. */

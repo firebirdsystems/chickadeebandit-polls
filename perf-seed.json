@@ -1,0 +1,1641 @@
+{
+ "seed": [
+  {
+   "sql": "INSERT INTO app_family_polls__polls (id, question, options_json, status, created_by, created_at, anonymous, closes_at, results_at) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-0.2 days','+0 minutes'), ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','+2 days','+0 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','+2 days','+0 minutes'))",
+   "params": [
+    "perf-poll-01",
+    "Where should we eat on Friday?",
+    "[{\"id\":\"perf-poll-01-opt-1\",\"text\":\"Tacos\"},{\"id\":\"perf-poll-01-opt-2\",\"text\":\"Pizza\"},{\"id\":\"perf-poll-01-opt-3\",\"text\":\"Thai\"},{\"id\":\"perf-poll-01-opt-4\",\"text\":\"Stay in and cook\"}]",
+    "open",
+    "{{me}}",
+    0
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-0.2 days','+20 minutes'))",
+   "params": [
+    "perf-vote-001",
+    "perf-poll-01",
+    "{{me}}",
+    "perf-poll-01-opt-1"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__vote_receipts (poll_id, member_id, created_at) VALUES (?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-0.2 days','+20 minutes'))",
+   "params": [
+    "perf-poll-01",
+    "{{me}}"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-0.2 days','+65 minutes'))",
+   "params": [
+    "perf-vote-002",
+    "perf-poll-01",
+    "{{partner}}",
+    "perf-poll-01-opt-2"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-0.2 days','+110 minutes'))",
+   "params": [
+    "perf-vote-003",
+    "perf-poll-01",
+    "{{adult2}}",
+    "perf-poll-01-opt-3"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-0.2 days','+155 minutes'))",
+   "params": [
+    "perf-vote-004",
+    "perf-poll-01",
+    "{{child2}}",
+    "perf-poll-01-opt-4"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__polls (id, question, options_json, status, created_by, created_at, anonymous, results_at) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-1 days','+0 minutes'), ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-1 days','+0 minutes'))",
+   "params": [
+    "perf-poll-02",
+    "Which movie for family night?",
+    "[{\"id\":\"perf-poll-02-opt-1\",\"text\":\"The animated one\"},{\"id\":\"perf-poll-02-opt-2\",\"text\":\"The space one\"},{\"id\":\"perf-poll-02-opt-3\",\"text\":\"The heist one\"}]",
+    "open",
+    "{{partner}}",
+    0
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_options (id, poll_id, text, position, status) VALUES (?, ?, ?, ?, ?)",
+   "params": [
+    "perf-poll-02-opt-1",
+    "perf-poll-02",
+    "The animated one",
+    0,
+    "open"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_options (id, poll_id, text, position, status) VALUES (?, ?, ?, ?, ?)",
+   "params": [
+    "perf-poll-02-opt-2",
+    "perf-poll-02",
+    "The space one",
+    1,
+    "open"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_options (id, poll_id, text, position, status) VALUES (?, ?, ?, ?, ?)",
+   "params": [
+    "perf-poll-02-opt-3",
+    "perf-poll-02",
+    "The heist one",
+    2,
+    "open"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-1 days','+20 minutes'))",
+   "params": [
+    "perf-vote-005",
+    "perf-poll-02",
+    "{{me}}",
+    "perf-poll-02-opt-2"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__vote_receipts (poll_id, member_id, created_at) VALUES (?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-1 days','+20 minutes'))",
+   "params": [
+    "perf-poll-02",
+    "{{me}}"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-1 days','+65 minutes'))",
+   "params": [
+    "perf-vote-006",
+    "perf-poll-02",
+    "{{partner}}",
+    "perf-poll-02-opt-1"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-1 days','+110 minutes'))",
+   "params": [
+    "perf-vote-007",
+    "perf-poll-02",
+    "{{child}}",
+    "perf-poll-02-opt-3"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-1 days','+155 minutes'))",
+   "params": [
+    "perf-vote-008",
+    "perf-poll-02",
+    "{{child2}}",
+    "perf-poll-02-opt-2"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__guest_votes (id, poll_id, option_id, source, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%SZ','now','-1 days','+100 minutes'))",
+   "params": [
+    "perf-poll-02-guest-1",
+    "perf-poll-02",
+    "perf-poll-02-opt-2",
+    "external"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__guest_votes (id, poll_id, option_id, source, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%SZ','now','-1 days','+150 minutes'))",
+   "params": [
+    "perf-poll-02-guest-2",
+    "perf-poll-02",
+    "perf-poll-02-opt-1",
+    "external"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__guest_votes (id, poll_id, option_id, source, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%SZ','now','-1 days','+200 minutes'))",
+   "params": [
+    "perf-poll-02-guest-3",
+    "perf-poll-02",
+    "perf-poll-02-opt-3",
+    "external"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__guest_votes (id, poll_id, option_id, source, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%SZ','now','-1 days','+250 minutes'))",
+   "params": [
+    "perf-poll-02-guest-4",
+    "perf-poll-02",
+    "perf-poll-02-opt-2",
+    "external"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__polls (id, question, options_json, status, created_by, created_at, anonymous) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-2 days','+0 minutes'), ?)",
+   "params": [
+    "perf-poll-03",
+    "Summer holiday: where to?",
+    "[{\"id\":\"perf-poll-03-opt-1\",\"text\":\"The lake cabin\"},{\"id\":\"perf-poll-03-opt-2\",\"text\":\"Camping on the coast\"},{\"id\":\"perf-poll-03-opt-3\",\"text\":\"City trip\"},{\"id\":\"perf-poll-03-opt-4\",\"text\":\"Visit grandma\"}]",
+    "open",
+    "{{me}}",
+    1
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, NULL, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-2 days','+20 minutes'))",
+   "params": [
+    "perf-vote-009",
+    "perf-poll-03",
+    "perf-poll-03-opt-3"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__vote_receipts (poll_id, member_id, created_at) VALUES (?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-2 days','+20 minutes'))",
+   "params": [
+    "perf-poll-03",
+    "{{me}}"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, NULL, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-2 days','+65 minutes'))",
+   "params": [
+    "perf-vote-010",
+    "perf-poll-03",
+    "perf-poll-03-opt-4"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, NULL, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-2 days','+110 minutes'))",
+   "params": [
+    "perf-vote-011",
+    "perf-poll-03",
+    "perf-poll-03-opt-1"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__polls (id, question, options_json, status, created_by, created_at, anonymous, closes_at, results_at) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-3 days','+0 minutes'), ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','+5 days','+0 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-3 days','+0 minutes'))",
+   "params": [
+    "perf-poll-04",
+    "What colour for the hallway?",
+    "[{\"id\":\"perf-poll-04-opt-1\",\"text\":\"Warm white\"},{\"id\":\"perf-poll-04-opt-2\",\"text\":\"Sage green\"},{\"id\":\"perf-poll-04-opt-3\",\"text\":\"Pale blue\"}]",
+    "open",
+    "{{adult2}}",
+    0
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-3 days','+20 minutes'))",
+   "params": [
+    "perf-vote-012",
+    "perf-poll-04",
+    "{{me}}",
+    "perf-poll-04-opt-1"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__vote_receipts (poll_id, member_id, created_at) VALUES (?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-3 days','+20 minutes'))",
+   "params": [
+    "perf-poll-04",
+    "{{me}}"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-3 days','+65 minutes'))",
+   "params": [
+    "perf-vote-013",
+    "perf-poll-04",
+    "{{partner}}",
+    "perf-poll-04-opt-3"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-3 days','+110 minutes'))",
+   "params": [
+    "perf-vote-014",
+    "perf-poll-04",
+    "{{adult2}}",
+    "perf-poll-04-opt-2"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-3 days','+155 minutes'))",
+   "params": [
+    "perf-vote-015",
+    "perf-poll-04",
+    "{{child2}}",
+    "perf-poll-04-opt-1"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__polls (id, question, options_json, status, created_by, created_at, anonymous) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-5 days','+0 minutes'), ?)",
+   "params": [
+    "perf-poll-05",
+    "Board game on Sunday?",
+    "[{\"id\":\"perf-poll-05-opt-1\",\"text\":\"Catan\"},{\"id\":\"perf-poll-05-opt-2\",\"text\":\"Ticket to Ride\"},{\"id\":\"perf-poll-05-opt-3\",\"text\":\"Uno\"},{\"id\":\"perf-poll-05-opt-4\",\"text\":\"Charades\"},{\"id\":\"perf-poll-05-opt-5\",\"text\":\"Monopoly\"}]",
+    "open",
+    "{{me}}",
+    0
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__polls (id, question, options_json, status, created_by, created_at, anonymous, closes_at, results_at) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-6 days','+0 minutes'), ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-4 days','+0 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-4 days','+0 minutes'))",
+   "params": [
+    "perf-poll-06",
+    "Who picks the playlist for the road trip?",
+    "[{\"id\":\"perf-poll-06-opt-1\",\"text\":\"Mum\"},{\"id\":\"perf-poll-06-opt-2\",\"text\":\"Dad\"},{\"id\":\"perf-poll-06-opt-3\",\"text\":\"The kids take turns\"}]",
+    "closed",
+    "{{partner}}",
+    0
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-6 days','+20 minutes'))",
+   "params": [
+    "perf-vote-016",
+    "perf-poll-06",
+    "{{partner}}",
+    "perf-poll-06-opt-3"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-6 days','+65 minutes'))",
+   "params": [
+    "perf-vote-017",
+    "perf-poll-06",
+    "{{adult2}}",
+    "perf-poll-06-opt-2"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-6 days','+110 minutes'))",
+   "params": [
+    "perf-vote-018",
+    "perf-poll-06",
+    "{{child}}",
+    "perf-poll-06-opt-1"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-6 days','+155 minutes'))",
+   "params": [
+    "perf-vote-019",
+    "perf-poll-06",
+    "{{child2}}",
+    "perf-poll-06-opt-3"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__polls (id, question, options_json, status, created_by, created_at, anonymous) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-11.5 days','+0 minutes'), ?)",
+   "params": [
+    "perf-poll-07",
+    "Name for the new kitten?",
+    "[{\"id\":\"perf-poll-07-opt-1\",\"text\":\"Biscuit\"},{\"id\":\"perf-poll-07-opt-2\",\"text\":\"Pepper\"},{\"id\":\"perf-poll-07-opt-3\",\"text\":\"Mochi\"},{\"id\":\"perf-poll-07-opt-4\",\"text\":\"Sir Whiskers\"}]",
+    "closed",
+    "{{me}}",
+    1
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_options (id, poll_id, text, position, status) VALUES (?, ?, ?, ?, ?)",
+   "params": [
+    "perf-poll-07-opt-1",
+    "perf-poll-07",
+    "Biscuit",
+    0,
+    "open"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_options (id, poll_id, text, position, status) VALUES (?, ?, ?, ?, ?)",
+   "params": [
+    "perf-poll-07-opt-2",
+    "perf-poll-07",
+    "Pepper",
+    1,
+    "open"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_options (id, poll_id, text, position, status) VALUES (?, ?, ?, ?, ?)",
+   "params": [
+    "perf-poll-07-opt-3",
+    "perf-poll-07",
+    "Mochi",
+    2,
+    "open"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_options (id, poll_id, text, position, status) VALUES (?, ?, ?, ?, ?)",
+   "params": [
+    "perf-poll-07-opt-4",
+    "perf-poll-07",
+    "Sir Whiskers",
+    3,
+    "open"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, NULL, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-11.5 days','+20 minutes'))",
+   "params": [
+    "perf-vote-020",
+    "perf-poll-07",
+    "perf-poll-07-opt-3"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__vote_receipts (poll_id, member_id, created_at) VALUES (?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-11.5 days','+20 minutes'))",
+   "params": [
+    "perf-poll-07",
+    "{{me}}"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, NULL, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-11.5 days','+65 minutes'))",
+   "params": [
+    "perf-vote-021",
+    "perf-poll-07",
+    "perf-poll-07-opt-4"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, NULL, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-11.5 days','+110 minutes'))",
+   "params": [
+    "perf-vote-022",
+    "perf-poll-07",
+    "perf-poll-07-opt-1"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, NULL, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-11.5 days','+155 minutes'))",
+   "params": [
+    "perf-vote-023",
+    "perf-poll-07",
+    "perf-poll-07-opt-2"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, NULL, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-11.5 days','+200 minutes'))",
+   "params": [
+    "perf-vote-024",
+    "perf-poll-07",
+    "perf-poll-07-opt-3"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__guest_votes (id, poll_id, option_id, source, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%SZ','now','-11.5 days','+100 minutes'))",
+   "params": [
+    "perf-poll-07-guest-1",
+    "perf-poll-07",
+    "perf-poll-07-opt-3",
+    "external"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__guest_votes (id, poll_id, option_id, source, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%SZ','now','-11.5 days','+150 minutes'))",
+   "params": [
+    "perf-poll-07-guest-2",
+    "perf-poll-07",
+    "perf-poll-07-opt-1",
+    "external"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__guest_votes (id, poll_id, option_id, source, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%SZ','now','-11.5 days','+200 minutes'))",
+   "params": [
+    "perf-poll-07-guest-3",
+    "perf-poll-07",
+    "perf-poll-07-opt-3",
+    "external"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__guest_votes (id, poll_id, option_id, source, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%SZ','now','-11.5 days','+250 minutes'))",
+   "params": [
+    "perf-poll-07-guest-4",
+    "perf-poll-07",
+    "perf-poll-07-opt-1",
+    "external"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__polls (id, question, options_json, status, created_by, created_at, anonymous) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-17 days','+0 minutes'), ?)",
+   "params": [
+    "perf-poll-08",
+    "Pancakes or waffles on Saturday?",
+    "[{\"id\":\"perf-poll-08-opt-1\",\"text\":\"Pancakes\"},{\"id\":\"perf-poll-08-opt-2\",\"text\":\"Waffles\"}]",
+    "closed",
+    "{{adult2}}",
+    0
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-17 days','+20 minutes'))",
+   "params": [
+    "perf-vote-025",
+    "perf-poll-08",
+    "{{me}}",
+    "perf-poll-08-opt-2"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__vote_receipts (poll_id, member_id, created_at) VALUES (?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-17 days','+20 minutes'))",
+   "params": [
+    "perf-poll-08",
+    "{{me}}"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-17 days','+65 minutes'))",
+   "params": [
+    "perf-vote-026",
+    "perf-poll-08",
+    "{{partner}}",
+    "perf-poll-08-opt-2"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-17 days','+110 minutes'))",
+   "params": [
+    "perf-vote-027",
+    "perf-poll-08",
+    "{{adult2}}",
+    "perf-poll-08-opt-2"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-17 days','+155 minutes'))",
+   "params": [
+    "perf-vote-028",
+    "perf-poll-08",
+    "{{child}}",
+    "perf-poll-08-opt-2"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__polls (id, question, options_json, status, created_by, created_at, anonymous) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-22.5 days','+0 minutes'), ?)",
+   "params": [
+    "perf-poll-09",
+    "When should we do the garage clear-out?",
+    "[{\"id\":\"perf-poll-09-opt-1\",\"text\":\"This Saturday\"},{\"id\":\"perf-poll-09-opt-2\",\"text\":\"Next Saturday\"},{\"id\":\"perf-poll-09-opt-3\",\"text\":\"End of the month\"}]",
+    "closed",
+    "{{me}}",
+    0
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-22.5 days','+20 minutes'))",
+   "params": [
+    "perf-vote-029",
+    "perf-poll-09",
+    "{{me}}",
+    "perf-poll-09-opt-3"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__vote_receipts (poll_id, member_id, created_at) VALUES (?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-22.5 days','+20 minutes'))",
+   "params": [
+    "perf-poll-09",
+    "{{me}}"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-22.5 days','+65 minutes'))",
+   "params": [
+    "perf-vote-030",
+    "perf-poll-09",
+    "{{partner}}",
+    "perf-poll-09-opt-1"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-22.5 days','+110 minutes'))",
+   "params": [
+    "perf-vote-031",
+    "perf-poll-09",
+    "{{adult2}}",
+    "perf-poll-09-opt-2"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-22.5 days','+155 minutes'))",
+   "params": [
+    "perf-vote-032",
+    "perf-poll-09",
+    "{{child2}}",
+    "perf-poll-09-opt-3"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__polls (id, question, options_json, status, created_by, created_at, anonymous) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-28 days','+0 minutes'), ?)",
+   "params": [
+    "perf-poll-10",
+    "Which day for the birthday party?",
+    "[{\"id\":\"perf-poll-10-opt-1\",\"text\":\"Saturday afternoon\"},{\"id\":\"perf-poll-10-opt-2\",\"text\":\"Sunday lunch\"}]",
+    "closed",
+    "{{partner}}",
+    0
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_options (id, poll_id, text, position, status) VALUES (?, ?, ?, ?, ?)",
+   "params": [
+    "perf-poll-10-opt-1",
+    "perf-poll-10",
+    "Saturday afternoon",
+    0,
+    "open"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_options (id, poll_id, text, position, status) VALUES (?, ?, ?, ?, ?)",
+   "params": [
+    "perf-poll-10-opt-2",
+    "perf-poll-10",
+    "Sunday lunch",
+    1,
+    "open"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-28 days','+20 minutes'))",
+   "params": [
+    "perf-vote-033",
+    "perf-poll-10",
+    "{{me}}",
+    "perf-poll-10-opt-2"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__vote_receipts (poll_id, member_id, created_at) VALUES (?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-28 days','+20 minutes'))",
+   "params": [
+    "perf-poll-10",
+    "{{me}}"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-28 days','+65 minutes'))",
+   "params": [
+    "perf-vote-034",
+    "perf-poll-10",
+    "{{partner}}",
+    "perf-poll-10-opt-2"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-28 days','+110 minutes'))",
+   "params": [
+    "perf-vote-035",
+    "perf-poll-10",
+    "{{child}}",
+    "perf-poll-10-opt-2"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-28 days','+155 minutes'))",
+   "params": [
+    "perf-vote-036",
+    "perf-poll-10",
+    "{{child2}}",
+    "perf-poll-10-opt-2"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__guest_votes (id, poll_id, option_id, source, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%SZ','now','-28 days','+100 minutes'))",
+   "params": [
+    "perf-poll-10-guest-1",
+    "perf-poll-10",
+    "perf-poll-10-opt-2",
+    "external"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__guest_votes (id, poll_id, option_id, source, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%SZ','now','-28 days','+150 minutes'))",
+   "params": [
+    "perf-poll-10-guest-2",
+    "perf-poll-10",
+    "perf-poll-10-opt-2",
+    "external"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__guest_votes (id, poll_id, option_id, source, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%SZ','now','-28 days','+200 minutes'))",
+   "params": [
+    "perf-poll-10-guest-3",
+    "perf-poll-10",
+    "perf-poll-10-opt-2",
+    "external"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__guest_votes (id, poll_id, option_id, source, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%SZ','now','-28 days','+250 minutes'))",
+   "params": [
+    "perf-poll-10-guest-4",
+    "perf-poll-10",
+    "perf-poll-10-opt-2",
+    "external"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__polls (id, question, options_json, status, created_by, created_at, anonymous, closes_at, results_at) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-33.5 days','+0 minutes'), ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-31.5 days','+0 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-31.5 days','+0 minutes'))",
+   "params": [
+    "perf-poll-11",
+    "Christmas tree: real or artificial?",
+    "[{\"id\":\"perf-poll-11-opt-1\",\"text\":\"Real\"},{\"id\":\"perf-poll-11-opt-2\",\"text\":\"Artificial\"}]",
+    "closed",
+    "{{me}}",
+    1
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, NULL, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-33.5 days','+20 minutes'))",
+   "params": [
+    "perf-vote-037",
+    "perf-poll-11",
+    "perf-poll-11-opt-1"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__vote_receipts (poll_id, member_id, created_at) VALUES (?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-33.5 days','+20 minutes'))",
+   "params": [
+    "perf-poll-11",
+    "{{me}}"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, NULL, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-33.5 days','+65 minutes'))",
+   "params": [
+    "perf-vote-038",
+    "perf-poll-11",
+    "perf-poll-11-opt-2"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, NULL, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-33.5 days','+110 minutes'))",
+   "params": [
+    "perf-vote-039",
+    "perf-poll-11",
+    "perf-poll-11-opt-1"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, NULL, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-33.5 days','+155 minutes'))",
+   "params": [
+    "perf-vote-040",
+    "perf-poll-11",
+    "perf-poll-11-opt-2"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__polls (id, question, options_json, status, created_by, created_at, anonymous) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-39 days','+0 minutes'), ?)",
+   "params": [
+    "perf-poll-12",
+    "New rule: no phones at dinner?",
+    "[{\"id\":\"perf-poll-12-opt-1\",\"text\":\"Yes\"},{\"id\":\"perf-poll-12-opt-2\",\"text\":\"No\"},{\"id\":\"perf-poll-12-opt-3\",\"text\":\"Weekdays only\"}]",
+    "closed",
+    "{{adult2}}",
+    0
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-39 days','+20 minutes'))",
+   "params": [
+    "perf-vote-041",
+    "perf-poll-12",
+    "{{partner}}",
+    "perf-poll-12-opt-3"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-39 days','+65 minutes'))",
+   "params": [
+    "perf-vote-042",
+    "perf-poll-12",
+    "{{adult2}}",
+    "perf-poll-12-opt-2"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-39 days','+110 minutes'))",
+   "params": [
+    "perf-vote-043",
+    "perf-poll-12",
+    "{{child}}",
+    "perf-poll-12-opt-1"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-39 days','+155 minutes'))",
+   "params": [
+    "perf-vote-044",
+    "perf-poll-12",
+    "{{child2}}",
+    "perf-poll-12-opt-3"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__polls (id, question, options_json, status, created_by, created_at, anonymous) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-44.5 days','+0 minutes'), ?)",
+   "params": [
+    "perf-poll-13",
+    "What should we plant in the raised bed?",
+    "[{\"id\":\"perf-poll-13-opt-1\",\"text\":\"Tomatoes\"},{\"id\":\"perf-poll-13-opt-2\",\"text\":\"Strawberries\"},{\"id\":\"perf-poll-13-opt-3\",\"text\":\"Herbs\"},{\"id\":\"perf-poll-13-opt-4\",\"text\":\"Sunflowers\"}]",
+    "closed",
+    "{{me}}",
+    0
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-44.5 days','+20 minutes'))",
+   "params": [
+    "perf-vote-045",
+    "perf-poll-13",
+    "{{me}}",
+    "perf-poll-13-opt-1"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__vote_receipts (poll_id, member_id, created_at) VALUES (?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-44.5 days','+20 minutes'))",
+   "params": [
+    "perf-poll-13",
+    "{{me}}"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-44.5 days','+65 minutes'))",
+   "params": [
+    "perf-vote-046",
+    "perf-poll-13",
+    "{{partner}}",
+    "perf-poll-13-opt-2"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-44.5 days','+110 minutes'))",
+   "params": [
+    "perf-vote-047",
+    "perf-poll-13",
+    "{{adult2}}",
+    "perf-poll-13-opt-3"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-44.5 days','+155 minutes'))",
+   "params": [
+    "perf-vote-048",
+    "perf-poll-13",
+    "{{child}}",
+    "perf-poll-13-opt-4"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-44.5 days','+200 minutes'))",
+   "params": [
+    "perf-vote-049",
+    "perf-poll-13",
+    "{{child2}}",
+    "perf-poll-13-opt-1"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__polls (id, question, options_json, status, created_by, created_at, anonymous) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-50 days','+0 minutes'), ?)",
+   "params": [
+    "perf-poll-14",
+    "Halloween costume theme?",
+    "[{\"id\":\"perf-poll-14-opt-1\",\"text\":\"Superheroes\"},{\"id\":\"perf-poll-14-opt-2\",\"text\":\"Classic monsters\"},{\"id\":\"perf-poll-14-opt-3\",\"text\":\"Everyone picks their own\"}]",
+    "closed",
+    "{{partner}}",
+    0
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-50 days','+20 minutes'))",
+   "params": [
+    "perf-vote-050",
+    "perf-poll-14",
+    "{{me}}",
+    "perf-poll-14-opt-2"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__vote_receipts (poll_id, member_id, created_at) VALUES (?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-50 days','+20 minutes'))",
+   "params": [
+    "perf-poll-14",
+    "{{me}}"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-50 days','+65 minutes'))",
+   "params": [
+    "perf-vote-051",
+    "perf-poll-14",
+    "{{partner}}",
+    "perf-poll-14-opt-1"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-50 days','+110 minutes'))",
+   "params": [
+    "perf-vote-052",
+    "perf-poll-14",
+    "{{adult2}}",
+    "perf-poll-14-opt-3"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-50 days','+155 minutes'))",
+   "params": [
+    "perf-vote-053",
+    "perf-poll-14",
+    "{{child}}",
+    "perf-poll-14-opt-2"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__polls (id, question, options_json, status, created_by, created_at, anonymous) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-55.5 days','+0 minutes'), ?)",
+   "params": [
+    "perf-poll-15",
+    "Weekend outing?",
+    "[{\"id\":\"perf-poll-15-opt-1\",\"text\":\"Zoo\"},{\"id\":\"perf-poll-15-opt-2\",\"text\":\"Science museum\"},{\"id\":\"perf-poll-15-opt-3\",\"text\":\"Hike\"},{\"id\":\"perf-poll-15-opt-4\",\"text\":\"Swimming pool\"}]",
+    "closed",
+    "{{me}}",
+    1
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, NULL, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-55.5 days','+20 minutes'))",
+   "params": [
+    "perf-vote-054",
+    "perf-poll-15",
+    "perf-poll-15-opt-3"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__vote_receipts (poll_id, member_id, created_at) VALUES (?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-55.5 days','+20 minutes'))",
+   "params": [
+    "perf-poll-15",
+    "{{me}}"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, NULL, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-55.5 days','+65 minutes'))",
+   "params": [
+    "perf-vote-055",
+    "perf-poll-15",
+    "perf-poll-15-opt-4"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, NULL, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-55.5 days','+110 minutes'))",
+   "params": [
+    "perf-vote-056",
+    "perf-poll-15",
+    "perf-poll-15-opt-1"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, NULL, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-55.5 days','+155 minutes'))",
+   "params": [
+    "perf-vote-057",
+    "perf-poll-15",
+    "perf-poll-15-opt-2"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__polls (id, question, options_json, status, created_by, created_at, anonymous, closes_at, results_at) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-61 days','+0 minutes'), ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-59 days','+0 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-59 days','+0 minutes'))",
+   "params": [
+    "perf-poll-16",
+    "Which takeaway on moving day?",
+    "[{\"id\":\"perf-poll-16-opt-1\",\"text\":\"Fish and chips\"},{\"id\":\"perf-poll-16-opt-2\",\"text\":\"Curry\"},{\"id\":\"perf-poll-16-opt-3\",\"text\":\"Burgers\"}]",
+    "closed",
+    "{{adult2}}",
+    0
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-61 days','+20 minutes'))",
+   "params": [
+    "perf-vote-058",
+    "perf-poll-16",
+    "{{me}}",
+    "perf-poll-16-opt-1"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__vote_receipts (poll_id, member_id, created_at) VALUES (?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-61 days','+20 minutes'))",
+   "params": [
+    "perf-poll-16",
+    "{{me}}"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-61 days','+65 minutes'))",
+   "params": [
+    "perf-vote-059",
+    "perf-poll-16",
+    "{{partner}}",
+    "perf-poll-16-opt-3"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-61 days','+110 minutes'))",
+   "params": [
+    "perf-vote-060",
+    "perf-poll-16",
+    "{{child}}",
+    "perf-poll-16-opt-2"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-61 days','+155 minutes'))",
+   "params": [
+    "perf-vote-061",
+    "perf-poll-16",
+    "{{child2}}",
+    "perf-poll-16-opt-1"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__polls (id, question, options_json, status, created_by, created_at, anonymous) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-66.5 days','+0 minutes'), ?)",
+   "params": [
+    "perf-poll-17",
+    "Bedtime on school nights?",
+    "[{\"id\":\"perf-poll-17-opt-1\",\"text\":\"8:00\"},{\"id\":\"perf-poll-17-opt-2\",\"text\":\"8:30\"},{\"id\":\"perf-poll-17-opt-3\",\"text\":\"9:00\"}]",
+    "closed",
+    "{{me}}",
+    0
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-66.5 days','+20 minutes'))",
+   "params": [
+    "perf-vote-062",
+    "perf-poll-17",
+    "{{me}}",
+    "perf-poll-17-opt-2"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__vote_receipts (poll_id, member_id, created_at) VALUES (?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-66.5 days','+20 minutes'))",
+   "params": [
+    "perf-poll-17",
+    "{{me}}"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-66.5 days','+65 minutes'))",
+   "params": [
+    "perf-vote-063",
+    "perf-poll-17",
+    "{{adult2}}",
+    "perf-poll-17-opt-3"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-66.5 days','+110 minutes'))",
+   "params": [
+    "perf-vote-064",
+    "perf-poll-17",
+    "{{child}}",
+    "perf-poll-17-opt-1"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-66.5 days','+155 minutes'))",
+   "params": [
+    "perf-vote-065",
+    "perf-poll-17",
+    "{{child2}}",
+    "perf-poll-17-opt-2"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__polls (id, question, options_json, status, created_by, created_at, anonymous) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-72 days','+0 minutes'), ?)",
+   "params": [
+    "perf-poll-18",
+    "Where do we hang the big picture?",
+    "[{\"id\":\"perf-poll-18-opt-1\",\"text\":\"Living room\"},{\"id\":\"perf-poll-18-opt-2\",\"text\":\"Stairs\"},{\"id\":\"perf-poll-18-opt-3\",\"text\":\"Dining room\"}]",
+    "closed",
+    "{{partner}}",
+    0
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-72 days','+20 minutes'))",
+   "params": [
+    "perf-vote-066",
+    "perf-poll-18",
+    "{{partner}}",
+    "perf-poll-18-opt-3"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-72 days','+65 minutes'))",
+   "params": [
+    "perf-vote-067",
+    "perf-poll-18",
+    "{{adult2}}",
+    "perf-poll-18-opt-2"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-72 days','+110 minutes'))",
+   "params": [
+    "perf-vote-068",
+    "perf-poll-18",
+    "{{child}}",
+    "perf-poll-18-opt-1"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-72 days','+155 minutes'))",
+   "params": [
+    "perf-vote-069",
+    "perf-poll-18",
+    "{{child2}}",
+    "perf-poll-18-opt-3"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__polls (id, question, options_json, status, created_by, created_at, anonymous) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-77.5 days','+0 minutes'), ?)",
+   "params": [
+    "perf-poll-19",
+    "Dessert for Sunday lunch?",
+    "[{\"id\":\"perf-poll-19-opt-1\",\"text\":\"Apple crumble\"},{\"id\":\"perf-poll-19-opt-2\",\"text\":\"Ice cream\"},{\"id\":\"perf-poll-19-opt-3\",\"text\":\"Chocolate cake\"},{\"id\":\"perf-poll-19-opt-4\",\"text\":\"Fruit salad\"}]",
+    "closed",
+    "{{me}}",
+    1
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, NULL, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-77.5 days','+20 minutes'))",
+   "params": [
+    "perf-vote-070",
+    "perf-poll-19",
+    "perf-poll-19-opt-3"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__vote_receipts (poll_id, member_id, created_at) VALUES (?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-77.5 days','+20 minutes'))",
+   "params": [
+    "perf-poll-19",
+    "{{me}}"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, NULL, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-77.5 days','+65 minutes'))",
+   "params": [
+    "perf-vote-071",
+    "perf-poll-19",
+    "perf-poll-19-opt-4"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, NULL, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-77.5 days','+110 minutes'))",
+   "params": [
+    "perf-vote-072",
+    "perf-poll-19",
+    "perf-poll-19-opt-1"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, NULL, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-77.5 days','+155 minutes'))",
+   "params": [
+    "perf-vote-073",
+    "perf-poll-19",
+    "perf-poll-19-opt-2"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, NULL, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-77.5 days','+200 minutes'))",
+   "params": [
+    "perf-vote-074",
+    "perf-poll-19",
+    "perf-poll-19-opt-3"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__polls (id, question, options_json, status, created_by, created_at, anonymous) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-83 days','+0 minutes'), ?)",
+   "params": [
+    "perf-poll-20",
+    "Should we get a second bike rack?",
+    "[{\"id\":\"perf-poll-20-opt-1\",\"text\":\"Yes\"},{\"id\":\"perf-poll-20-opt-2\",\"text\":\"No\"}]",
+    "closed",
+    "{{adult2}}",
+    0
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-83 days','+20 minutes'))",
+   "params": [
+    "perf-vote-075",
+    "perf-poll-20",
+    "{{me}}",
+    "perf-poll-20-opt-2"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__vote_receipts (poll_id, member_id, created_at) VALUES (?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-83 days','+20 minutes'))",
+   "params": [
+    "perf-poll-20",
+    "{{me}}"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-83 days','+65 minutes'))",
+   "params": [
+    "perf-vote-076",
+    "perf-poll-20",
+    "{{partner}}",
+    "perf-poll-20-opt-2"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-83 days','+110 minutes'))",
+   "params": [
+    "perf-vote-077",
+    "perf-poll-20",
+    "{{adult2}}",
+    "perf-poll-20-opt-2"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-83 days','+155 minutes'))",
+   "params": [
+    "perf-vote-078",
+    "perf-poll-20",
+    "{{child}}",
+    "perf-poll-20-opt-2"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__polls (id, question, options_json, status, created_by, created_at, anonymous, closes_at, results_at) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-88.5 days','+0 minutes'), ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-86.5 days','+0 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-86.5 days','+0 minutes'))",
+   "params": [
+    "perf-poll-21",
+    "Family photo outfits?",
+    "[{\"id\":\"perf-poll-21-opt-1\",\"text\":\"All white\"},{\"id\":\"perf-poll-21-opt-2\",\"text\":\"Denim\"},{\"id\":\"perf-poll-21-opt-3\",\"text\":\"Whatever we like\"}]",
+    "closed",
+    "{{me}}",
+    0
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-88.5 days','+20 minutes'))",
+   "params": [
+    "perf-vote-079",
+    "perf-poll-21",
+    "{{me}}",
+    "perf-poll-21-opt-3"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__vote_receipts (poll_id, member_id, created_at) VALUES (?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-88.5 days','+20 minutes'))",
+   "params": [
+    "perf-poll-21",
+    "{{me}}"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-88.5 days','+65 minutes'))",
+   "params": [
+    "perf-vote-080",
+    "perf-poll-21",
+    "{{partner}}",
+    "perf-poll-21-opt-1"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-88.5 days','+110 minutes'))",
+   "params": [
+    "perf-vote-081",
+    "perf-poll-21",
+    "{{adult2}}",
+    "perf-poll-21-opt-2"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-88.5 days','+155 minutes'))",
+   "params": [
+    "perf-vote-082",
+    "perf-poll-21",
+    "{{child2}}",
+    "perf-poll-21-opt-3"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__polls (id, question, options_json, status, created_by, created_at, anonymous) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-94 days','+0 minutes'), ?)",
+   "params": [
+    "perf-poll-22",
+    "Which series do we start next?",
+    "[{\"id\":\"perf-poll-22-opt-1\",\"text\":\"The baking one\"},{\"id\":\"perf-poll-22-opt-2\",\"text\":\"The nature documentary\"},{\"id\":\"perf-poll-22-opt-3\",\"text\":\"The detective one\"}]",
+    "closed",
+    "{{partner}}",
+    0
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-94 days','+20 minutes'))",
+   "params": [
+    "perf-vote-083",
+    "perf-poll-22",
+    "{{me}}",
+    "perf-poll-22-opt-1"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__vote_receipts (poll_id, member_id, created_at) VALUES (?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-94 days','+20 minutes'))",
+   "params": [
+    "perf-poll-22",
+    "{{me}}"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-94 days','+65 minutes'))",
+   "params": [
+    "perf-vote-084",
+    "perf-poll-22",
+    "{{partner}}",
+    "perf-poll-22-opt-3"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-94 days','+110 minutes'))",
+   "params": [
+    "perf-vote-085",
+    "perf-poll-22",
+    "{{child}}",
+    "perf-poll-22-opt-2"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-94 days','+155 minutes'))",
+   "params": [
+    "perf-vote-086",
+    "perf-poll-22",
+    "{{child2}}",
+    "perf-poll-22-opt-1"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__polls (id, question, options_json, status, created_by, created_at, anonymous) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-99.5 days','+0 minutes'), ?)",
+   "params": [
+    "perf-poll-23",
+    "Allowance day?",
+    "[{\"id\":\"perf-poll-23-opt-1\",\"text\":\"Friday\"},{\"id\":\"perf-poll-23-opt-2\",\"text\":\"Sunday\"}]",
+    "closed",
+    "{{me}}",
+    1
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, NULL, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-99.5 days','+20 minutes'))",
+   "params": [
+    "perf-vote-087",
+    "perf-poll-23",
+    "perf-poll-23-opt-1"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__vote_receipts (poll_id, member_id, created_at) VALUES (?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-99.5 days','+20 minutes'))",
+   "params": [
+    "perf-poll-23",
+    "{{me}}"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, NULL, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-99.5 days','+65 minutes'))",
+   "params": [
+    "perf-vote-088",
+    "perf-poll-23",
+    "perf-poll-23-opt-2"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, NULL, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-99.5 days','+110 minutes'))",
+   "params": [
+    "perf-vote-089",
+    "perf-poll-23",
+    "perf-poll-23-opt-1"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, NULL, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-99.5 days','+155 minutes'))",
+   "params": [
+    "perf-vote-090",
+    "perf-poll-23",
+    "perf-poll-23-opt-2"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__polls (id, question, options_json, status, created_by, created_at, anonymous) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-105 days','+0 minutes'), ?)",
+   "params": [
+    "perf-poll-24",
+    "Thanksgiving: host or travel?",
+    "[{\"id\":\"perf-poll-24-opt-1\",\"text\":\"Host here\"},{\"id\":\"perf-poll-24-opt-2\",\"text\":\"Travel to the cousins\"}]",
+    "closed",
+    "{{adult2}}",
+    0
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-105 days','+20 minutes'))",
+   "params": [
+    "perf-vote-091",
+    "perf-poll-24",
+    "{{partner}}",
+    "perf-poll-24-opt-2"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-105 days','+65 minutes'))",
+   "params": [
+    "perf-vote-092",
+    "perf-poll-24",
+    "{{adult2}}",
+    "perf-poll-24-opt-2"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-105 days','+110 minutes'))",
+   "params": [
+    "perf-vote-093",
+    "perf-poll-24",
+    "{{child}}",
+    "perf-poll-24-opt-2"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-105 days','+155 minutes'))",
+   "params": [
+    "perf-vote-094",
+    "perf-poll-24",
+    "{{child2}}",
+    "perf-poll-24-opt-2"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__polls (id, question, options_json, status, created_by, created_at, anonymous) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-110.5 days','+0 minutes'), ?)",
+   "params": [
+    "perf-poll-25",
+    "Who walks the dog before school?",
+    "[{\"id\":\"perf-poll-25-opt-1\",\"text\":\"Rota, one week each\"},{\"id\":\"perf-poll-25-opt-2\",\"text\":\"Whoever is up first\"},{\"id\":\"perf-poll-25-opt-3\",\"text\":\"Parents only\"}]",
+    "closed",
+    "{{me}}",
+    0
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-110.5 days','+20 minutes'))",
+   "params": [
+    "perf-vote-095",
+    "perf-poll-25",
+    "{{me}}",
+    "perf-poll-25-opt-1"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__vote_receipts (poll_id, member_id, created_at) VALUES (?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-110.5 days','+20 minutes'))",
+   "params": [
+    "perf-poll-25",
+    "{{me}}"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-110.5 days','+65 minutes'))",
+   "params": [
+    "perf-vote-096",
+    "perf-poll-25",
+    "{{partner}}",
+    "perf-poll-25-opt-2"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-110.5 days','+110 minutes'))",
+   "params": [
+    "perf-vote-097",
+    "perf-poll-25",
+    "{{adult2}}",
+    "perf-poll-25-opt-3"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-110.5 days','+155 minutes'))",
+   "params": [
+    "perf-vote-098",
+    "perf-poll-25",
+    "{{child}}",
+    "perf-poll-25-opt-1"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-110.5 days','+200 minutes'))",
+   "params": [
+    "perf-vote-099",
+    "perf-poll-25",
+    "{{child2}}",
+    "perf-poll-25-opt-2"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__polls (id, question, options_json, status, created_by, created_at, anonymous, closes_at, results_at) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-116 days','+0 minutes'), ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-114 days','+0 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now','-114 days','+0 minutes'))",
+   "params": [
+    "perf-poll-26",
+    "Breakfast for dinner on Wednesday?",
+    "[{\"id\":\"perf-poll-26-opt-1\",\"text\":\"Yes please\"},{\"id\":\"perf-poll-26-opt-2\",\"text\":\"No thanks\"}]",
+    "closed",
+    "{{partner}}",
+    0
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-116 days','+20 minutes'))",
+   "params": [
+    "perf-vote-100",
+    "perf-poll-26",
+    "{{me}}",
+    "perf-poll-26-opt-2"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__vote_receipts (poll_id, member_id, created_at) VALUES (?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-116 days','+20 minutes'))",
+   "params": [
+    "perf-poll-26",
+    "{{me}}"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-116 days','+65 minutes'))",
+   "params": [
+    "perf-vote-101",
+    "perf-poll-26",
+    "{{partner}}",
+    "perf-poll-26-opt-2"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-116 days','+110 minutes'))",
+   "params": [
+    "perf-vote-102",
+    "perf-poll-26",
+    "{{adult2}}",
+    "perf-poll-26-opt-2"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-116 days','+155 minutes'))",
+   "params": [
+    "perf-vote-103",
+    "perf-poll-26",
+    "{{child}}",
+    "perf-poll-26-opt-2"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__polls (id, question, options_json, status, created_by, created_at, anonymous) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-121.5 days','+0 minutes'), ?)",
+   "params": [
+    "perf-poll-27",
+    "New sofa: which one?",
+    "[{\"id\":\"perf-poll-27-opt-1\",\"text\":\"The grey corner one\"},{\"id\":\"perf-poll-27-opt-2\",\"text\":\"The blue three-seater\"},{\"id\":\"perf-poll-27-opt-3\",\"text\":\"Keep the old one\"}]",
+    "closed",
+    "{{me}}",
+    1
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, NULL, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-121.5 days','+20 minutes'))",
+   "params": [
+    "perf-vote-104",
+    "perf-poll-27",
+    "perf-poll-27-opt-3"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__vote_receipts (poll_id, member_id, created_at) VALUES (?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-121.5 days','+20 minutes'))",
+   "params": [
+    "perf-poll-27",
+    "{{me}}"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, NULL, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-121.5 days','+65 minutes'))",
+   "params": [
+    "perf-vote-105",
+    "perf-poll-27",
+    "perf-poll-27-opt-1"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, NULL, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-121.5 days','+110 minutes'))",
+   "params": [
+    "perf-vote-106",
+    "perf-poll-27",
+    "perf-poll-27-opt-2"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, NULL, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-121.5 days','+155 minutes'))",
+   "params": [
+    "perf-vote-107",
+    "perf-poll-27",
+    "perf-poll-27-opt-3"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__polls (id, question, options_json, status, created_by, created_at, anonymous) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-127 days','+0 minutes'), ?)",
+   "params": [
+    "perf-poll-28",
+    "Sunday chores before or after lunch?",
+    "[{\"id\":\"perf-poll-28-opt-1\",\"text\":\"Before\"},{\"id\":\"perf-poll-28-opt-2\",\"text\":\"After\"}]",
+    "closed",
+    "{{adult2}}",
+    0
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-127 days','+20 minutes'))",
+   "params": [
+    "perf-vote-108",
+    "perf-poll-28",
+    "{{me}}",
+    "perf-poll-28-opt-2"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__vote_receipts (poll_id, member_id, created_at) VALUES (?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-127 days','+20 minutes'))",
+   "params": [
+    "perf-poll-28",
+    "{{me}}"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-127 days','+65 minutes'))",
+   "params": [
+    "perf-vote-109",
+    "perf-poll-28",
+    "{{partner}}",
+    "perf-poll-28-opt-2"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-127 days','+110 minutes'))",
+   "params": [
+    "perf-vote-110",
+    "perf-poll-28",
+    "{{child}}",
+    "perf-poll-28-opt-2"
+   ]
+  },
+  {
+   "sql": "INSERT INTO app_family_polls__poll_votes (id, poll_id, member_id, option_id, created_at) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now','-127 days','+155 minutes'))",
+   "params": [
+    "perf-vote-111",
+    "perf-poll-28",
+    "{{child2}}",
+    "perf-poll-28-opt-2"
+   ]
+  }
+ ]
+}
