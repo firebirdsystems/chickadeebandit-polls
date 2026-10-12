@@ -103,6 +103,8 @@
     }
     .notice { background: var(--bg); color: var(--muted); }
     .error { background: var(--hub-tint-danger, #fee2e2); color: var(--red); }
+    .load-error { margin: 0 0 12px; padding: 10px 14px; border-radius: 10px; background: var(--hub-tint-danger, #fee2e2); color: var(--hub-tint-danger-fg, #b91c1c); font-size: 0.9rem; display: flex; gap: 10px; align-items: center; justify-content: space-between; }
+    .load-error-retry { background: none; border: 1px solid currentColor; border-radius: 8px; padding: 5px 10px; font: inherit; font-weight: 600; color: inherit; cursor: pointer; flex-shrink: 0; }
     .modal-backdrop {
       position: fixed;
       inset: 0;
@@ -218,9 +220,9 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sql, params }),
       });
-      const body = await response.json().catch(() => ({}));
-      if (!response.ok || body.error) {
-        throw new Error(body.error ?? `Database request failed (${response.status})`);
+      const body = await response.json().catch(() => null);
+      if (!response.ok || !body || typeof body !== "object" || body.error) {
+        throw new Error(body?.error ?? `Database request failed (${response.status})`);
       }
       return body;
     }
@@ -228,8 +230,8 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
     async function loadContext() {
       if (!CONTEXT) return;
       const response = await fetch(`${CONTEXT}?keys=family.members`);
-      if (!response.ok) throw new Error("Unable to load household members");
-      const body = await response.json();
+      const body = await response.json().catch(() => null);
+      if (!response.ok || !body || typeof body !== "object" || (Array.isArray(body.$errors) && body.$errors.includes("family.members"))) throw new Error("Unable to load household members");
       members = body["family.members"] ?? [];
       memberMap = new Map(members.map(member => [member.id, member]));
       if (HUB_MEMBER) me = memberMap.get(HUB_MEMBER.id) ?? HUB_MEMBER;
@@ -492,6 +494,12 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
     }
 
     function listHtml() {
+      // Nothing is known about the polls: no empty state, no new poll.
+      if (loadFailed) return `
+        <header class="header">
+          <div><h1>${glyph("ballot-box")} Polls</h1></div>
+        </header>
+        <div class="load-error" data-testid="load-error" role="alert"><span>Couldn’t load polls.</span> <button type="button" class="load-error-retry" data-testid="load-retry">Try again</button></div>`;
       const shows = (poll) => !searchQ || searchMatch(
         searchQ, searchableFields(poll, parseOptions(poll.options_json).map(o => o.text).join(" ")));
       // Timed polls float to the top, soonest first; polls whose time is up
@@ -852,9 +860,14 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
       if (button) button.disabled = true;
       errorMessage = "";
       try {
-        await db("UPDATE app_family_polls__polls SET status = 'closed' WHERE id = ?", [poll.id]);
+        const { changed } = await db("UPDATE app_family_polls__polls SET status = 'closed' WHERE id = ?", [poll.id]);
         // Reload so the now-unsealed votes are fetched for the results view.
         await loadData();
+        // The hub answers 200 with nothing changed when this member may not
+        // close the poll. One someone else closed first simply shows as closed.
+        if (changed === 0 && polls.find(item => item.id === poll.id)?.status !== "closed") {
+          errorMessage = "This poll could not be closed.";
+        }
       } catch (error) {
         errorMessage = error?.message ?? "Unable to close poll.";
       }
@@ -1124,12 +1137,21 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
       render();
     }
 
-    (async () => {
+    let loadFailed = false; // set when the first load fails
+    let countdownTimer = null;
+    async function firstLoad() {
       try {
         await Promise.all([loadContext(), loadData()]);
+        loadFailed = false;
+      } catch {
+        loadFailed = true;
+        render();
+        return;
+      }
+      try {
         endedSeen = new Set(polls.filter(poll => ended(poll)).map(poll => poll.id));
         render();
-        setInterval(tickCountdowns, COUNTDOWN_TICK_MS);
+        countdownTimer ??= setInterval(tickCountdowns, COUNTDOWN_TICK_MS);
         const deepLink = new URLSearchParams(location.search).get("pollId");
         if (deepLink && polls.some(poll => poll.id === deepLink)) {
           selectedPollId = deepLink;
@@ -1140,7 +1162,11 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
         errorMessage = error?.message ?? "Unable to load polls.";
         render();
       }
-    })();
+    }
+    document.addEventListener("click", (event) => {
+      if (event.target.closest('[data-testid="load-retry"]')) firstLoad();
+    });
+    firstLoad();
   </script>
 </body>
 </html>

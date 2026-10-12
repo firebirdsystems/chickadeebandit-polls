@@ -189,7 +189,7 @@
       "name": "a timed poll shows a countdown while it runs, and once time is up it takes no votes and leads the list even though no adult has closed it",
       "members": {
         "owner": "adult",
-        "voter": "adult"
+        "voter": "child"
       },
       "steps": [
         {
