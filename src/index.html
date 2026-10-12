@@ -724,7 +724,8 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
       try {
         await ensureOptionRows(poll);
       } catch (error) {
-        hubAlert("Couldn't prepare this poll for sharing", { description: error?.message ?? "" });
+        console.error(error);
+        hubAlert("Couldn’t prepare this poll for sharing — try again.");
         return;
       }
       const status = await share.listAll();
@@ -833,7 +834,7 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
       });
       if (!confirmed) return;
       try { await share.revoke(id); await openShareModal(pollId); }
-      catch (error) { hubAlert("Couldn't revoke share link", { description: error?.message ?? "" }); }
+      catch (error) { console.error(error); hubAlert("Couldn’t revoke the share link — try again."); }
     }
 
     async function closePoll() {
@@ -869,7 +870,8 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
           errorMessage = "This poll could not be closed.";
         }
       } catch (error) {
-        errorMessage = error?.message ?? "Unable to close poll.";
+        console.error(error);
+        errorMessage = "Couldn’t close the poll — try again.";
       }
       render();
     }
@@ -1081,7 +1083,8 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
       } catch (error) {
         button.disabled = false;
         modalError.hidden = false;
-        modalError.textContent = error?.message ?? "Unable to create poll.";
+        console.error(error);
+        modalError.textContent = "Couldn’t create the poll — try again.";
       }
     }
 
@@ -1101,7 +1104,13 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
           }),
         });
         const body = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(body.error ?? `Vote failed (${response.status})`);
+        if (!response.ok) {
+          // A refusal (4xx) is the hub's answer about this ballot — the poll
+          // closed, the vote was already cast — and is shown as given. Any
+          // other failure gets this page's own line below.
+          const refused = response.status >= 400 && response.status < 500 && typeof body.error === "string" && !!body.error;
+          throw Object.assign(new Error(body.error ?? `Vote failed (${response.status})`), { forUser: refused });
+        }
         // The receipt is what "you have voted" is read from, and it is recorded
         // for both modes. An anonymous ballot is deliberately NOT added to the
         // local votes list — there is no member id on it to reflect, and
@@ -1132,7 +1141,8 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
           });
         }
       } catch (error) {
-        errorMessage = error?.message ?? "Unable to submit vote.";
+        if (!error?.forUser) console.error(error);
+        errorMessage = error?.forUser ? error.message : "Couldn’t submit your vote — try again.";
       }
       render();
     }
@@ -1159,7 +1169,8 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
           await ensureTurnout(deepLink);
         }
       } catch (error) {
-        errorMessage = error?.message ?? "Unable to load polls.";
+        console.error(error);
+        errorMessage = "Couldn’t load the polls.";
         render();
       }
     }

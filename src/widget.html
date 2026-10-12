@@ -39,6 +39,7 @@
     .meta.urgent { color: #dc2626; font-weight: 700; }
     .empty { padding: 30px 12px; text-align: center; color: #94a3b8; }
     .foot a { color: inherit; font-weight: 700; text-decoration: none; }
+    .load-error { margin: 8px; padding: 8px 10px; border-radius: 10px; background: var(--hub-tint-danger, #fee2e2); color: var(--hub-tint-danger-fg, #b91c1c); font-size: 0.8rem; }
   </style>
 </head>
 <body>
@@ -59,7 +60,7 @@
         body: JSON.stringify({ sql, params }),
       });
       const body = await response.json().catch(() => null);
-      if (!response.ok || !body || typeof body !== "object" || body.error) throw new Error(body.error ?? "Unable to load polls");
+      if (!response.ok || !body || typeof body !== "object" || body.error) throw new Error(body?.error ?? "Unable to load polls");
       return body;
     }
 
@@ -111,7 +112,7 @@
       // re-read, so an idle dashboard costs the hub nothing.
       setInterval(() => render(loaded.polls, loaded.receipts), 60_000);
     }).catch(() => {
-      document.getElementById("root").innerHTML = '<div class="empty">Unable to load polls</div>';
+      document.getElementById("root").innerHTML = '<div class="load-error" data-testid="load-error" role="alert">Couldn’t load the polls.</div>';
     });
   </script>
 </body>
