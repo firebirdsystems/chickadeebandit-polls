@@ -155,7 +155,7 @@
 
   <script type="module">
     import { esc, isAdult, hubConfirm, hubAlert, createShareHelper, searchMatch, activeShareLinks, glyph, chickadee } from "/hub-sdk.js";
-    import { parseOptions, selectedOptionId, voteCounts, winningOptionIds, spoiledVotes, countedVotes, searchableFields, turnoutLabel, missingOptionRows, guestVoteLabel, pollEnded, countdownLabel, countdownUrgent, closesAtFromChoice, deadlinePassed, sortOpenPolls, resultsReleased, resultsAtFor } from "./logic.js";
+    import { parseOptions, selectedOptionId, voteCounts, winningOptionIds, spoiledVotes, countedVotes, searchableFields, turnoutLabel, missingOptionRows, guestVoteLabel, pollEnded, countdownLabel, countdownUrgent, closesAtFromChoice, deadlinePassed, sortOpenPolls, resultsReleased, resultsAtFor, shareFailureLine } from "./logic.js";
 
     const DB = window.__DB_URL ?? "";
     const CONTEXT = window.__CONTEXT_URL ?? "";
@@ -716,19 +716,25 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
       );
     }
 
-    async function openShareModal(pollId) {
+    async function openShareModal(pollId, { afterWrite = false } = {}) {
       const poll = polls.find(item => item.id === pollId);
       // Not after time is up either: a link minted then would invite ballots
       // that only count if someone later closes the poll.
-      if (!poll || votingOver(poll) || !canSteward(me)) return;
+      if (!poll || votingOver(poll) || !canSteward(me)) {
+        if (afterWrite) throw new Error("Share dialog not redrawn");
+        return;
+      }
       try {
         await ensureOptionRows(poll);
       } catch (error) {
         console.error(error);
+        if (afterWrite) throw error;
         hubAlert("Couldn’t prepare this poll for sharing — try again.");
         return;
       }
       const status = await share.listAll();
+      // A refused list read comes back EMPTY (`limits: null`); after a write that must not draw as "none".
+      if (afterWrite && status.limits === null) throw new Error("Share links could not be re-read");
       shareLinks = status.links;
       shareEntitled = status.entitled;
       const active = activeShareLinks(shareLinks, pollId);
@@ -804,17 +810,30 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
       const hours = Number(shareModal?.querySelector("#share-expiry")?.value) || undefined;
       const writable = !!shareModal?.querySelector("#share-writable")?.checked;
       const password = shareModal?.querySelector("#share-password")?.value?.trim() || undefined;
+      // The hub refuses a short password; say so here rather than as a failure to retry.
+      if (password && password.length < 6) { hubAlert("The password needs at least 6 characters."); return; }
       const button = shareModal?.querySelector("#share-create");
       if (button) { button.disabled = true; button.textContent = "Creating…"; }
+      let link;
       try {
-        const link = await share.create("poll", pollId, {
+        link = await share.create("poll", pollId, {
           expiresInHours: hours, label: poll?.question, writable, password,
         });
-        try { await navigator.clipboard.writeText(link.url); } catch { /* the row below shows it */ }
-        await openShareModal(pollId);
       } catch (error) {
         if (button) { button.disabled = false; button.textContent = "Create link"; }
-        hubAlert("Couldn't create share link", { description: error?.message ?? "" });
+        console.error(error);
+        hubAlert(error?.status === 402 && (writable || password || hours > 720)
+          ? "Links that take votes, have a password or a longer expiry need an active plan."
+          : shareFailureLine(error, { action: "create the share link", thing: "poll" }));
+        return;
+      }
+      try { await navigator.clipboard.writeText(link.url); } catch { /* the row below shows it */ }
+      // The link exists now; a failed list re-read must not read as a failed create.
+      try { await openShareModal(pollId, { afterWrite: true }); }
+      catch (error) {
+        console.error(error);
+        closeShareModal();
+        hubAlert("Share link created", { description: "Couldn’t refresh the list — open Share again to see it." });
       }
     }
 
@@ -833,8 +852,24 @@ let searchQ = "";       // in-app search (see logic.js searchableFields)
         destructive: true,
       });
       if (!confirmed) return;
-      try { await share.revoke(id); await openShareModal(pollId); }
-      catch (error) { console.error(error); hubAlert("Couldn’t revoke the share link — try again."); }
+      try { await share.revoke(id); }
+      catch (error) {
+        console.error(error);
+        // A 404 is a link the hub no longer has: done; the refresh below drops it.
+        if (error?.status !== 404) { hubAlert(shareFailureLine(error, { action: "revoke the share link", thing: "poll" })); return; }
+      }
+      shareLinks = shareLinks.filter(link => link.id !== id);
+      try { await openShareModal(pollId, { afterWrite: true }); }
+      catch (error) {
+        console.error(error);
+        closeShareModal();
+        hubAlert("Share link revoked", { description: "Couldn’t refresh the list — open Share again to see it." });
+        return;
+      }
+      // The hub's 404 also covers another member's link it would not let this one revoke.
+      if (activeShareLinks(shareLinks, pollId).some(link => link.id === id)) {
+        hubAlert("You don’t have permission to revoke the share link.");
+      }
     }
 
     async function closePoll() {

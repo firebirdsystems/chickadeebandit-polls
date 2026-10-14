@@ -29,9 +29,9 @@ describe("manifest", () => {
     // Retention is keyed on the POLL. Anonymous rows carry a constant
     // timestamp so that submission order cannot reidentify anyone, which means
     // a sweep over the ballots themselves would purge every one on its first
-    // run — the platform refuses retain_days on a protocol-written table for
+    // run — the platform refuses retention on a protocol-written table for
     // exactly that reason.
-    const retain = manifest.row_policies.polls.retain_days;
+    const retain = manifest.retention.polls;
     expect(retain.timestamp_column).toBe("created_at");
     expect(retain.dependent_tables.map(d => d.table).sort())
       .toEqual(["guest_votes", "poll_options", "poll_votes", "vote_receipts", "votes"]);
