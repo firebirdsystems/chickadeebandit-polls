@@ -43,17 +43,6 @@
       "frozen_when": {
         "status_column": "status",
         "locked_values": ["closed"]
-      },
-      "retain_days": {
-        "default": 730,
-        "timestamp_column": "created_at",
-        "dependent_tables": [
-          { "table": "poll_votes", "foreign_key": "poll_id" },
-          { "table": "votes", "foreign_key": "poll_id" },
-          { "table": "vote_receipts", "foreign_key": "poll_id" },
-          { "table": "poll_options", "foreign_key": "poll_id" },
-          { "table": "guest_votes", "foreign_key": "poll_id" }
-        ]
       }
     },
     "poll_votes": {
@@ -97,6 +86,19 @@
       "adults_bypass": false,
       "member_can_update": false,
       "endpoint_writes_only": true
+    }
+  },
+  "retention": {
+    "polls": {
+      "default": 730,
+      "timestamp_column": "created_at",
+      "dependent_tables": [
+        { "table": "poll_votes", "foreign_key": "poll_id" },
+        { "table": "votes", "foreign_key": "poll_id" },
+        { "table": "vote_receipts", "foreign_key": "poll_id" },
+        { "table": "poll_options", "foreign_key": "poll_id" },
+        { "table": "guest_votes", "foreign_key": "poll_id" }
+      ]
     }
   },
   "anonymous_responses": {
@@ -166,9 +168,6 @@
   "widget": {
     "label": "Polls",
     "size": "small"
-  },
-  "resource_limits": {
-    "max_db_bytes": 52428800
   },
   "icon": "🗳️"
 }
